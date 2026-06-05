@@ -1,0 +1,10 @@
+name: 'Bongolava'
+type: theme
+description: 'Bongolava Jobs — Drupal theme with Vue 3 + Vite + Tailwind CSS. Run npm install && npm run build inside vue-app/.'
+package: Custom
+core_version_requirement: ^9 || ^10 || ^11
+base theme: false
+regions:
+  content: Content
+libraries:
+  - bongolava/global

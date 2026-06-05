@@ -1,0 +1,24 @@
+/* Bongolava theme — base styles loaded before Vue app CSS */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: #fff;
+  color: #111827;
+}
+
+/* Hide Drupal's default toolbar offset when the Vue SPA is active */
+#bongolava-app {
+  min-height: 100vh;
+}

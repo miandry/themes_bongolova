@@ -1,0 +1,8 @@
+# JS is loaded once from html.html.twig (type=module). Do not attach index.js here — double mount breaks /jobs.
+global:
+  css:
+    theme:
+      css/style.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings

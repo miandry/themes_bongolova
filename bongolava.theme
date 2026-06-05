@@ -1,0 +1,120 @@
+<?php
+
+/**
+ * @file
+ * Theme hooks for the Bongolava theme (Vue 3 + Vite SPA).
+ */
+
+use Drupal\node\Entity\Node;
+
+/**
+ * Implements hook_preprocess_html().
+ *
+ * Injects the Drupal base path and asset version into the page so that
+ * the Vue app can resolve API URLs regardless of sub-directory installation.
+ */
+function bongolava_preprocess_html(array &$variables): void {
+  $variables['drupal_base_path'] = base_path();
+
+  $path = \Drupal::service('extension.list.theme')->getPath('bongolava');
+
+  // Public URL prefix for dist/ assets (used in html.html.twig).
+  $variables['bongolava_dist_url'] = rtrim(base_path(), '/') . '/' . $path . '/dist';
+
+  // Cache-busting version: max mtime of JS and CSS.
+  $dist_abs = \Drupal::root() . '/' . $path . '/dist/assets';
+  $mt_js  = is_readable($dist_abs . '/index.js')  ? filemtime($dist_abs . '/index.js')  : 0;
+  $mt_css = is_readable($dist_abs . '/style.css') ? filemtime($dist_abs . '/style.css') : 0;
+  $variables['bongolava_assets_version'] = (string) max($mt_js, $mt_css);
+}
+
+/**
+ * Implements hook_preprocess_page().
+ *
+ * Passes server-side data to the Vue app via drupalSettings.
+ */
+function bongolava_preprocess_page(array &$variables): void {
+  // Base path for API calls from Vue.
+  $variables['#attached']['drupalSettings']['bongolava']['basePath'] = base_path();
+
+  // Current user info.
+  $account = \Drupal::currentUser();
+  $variables['#attached']['drupalSettings']['bongolava']['currentUser'] = [
+    'uid'   => (int) $account->id(),
+    'name'  => $account->getAccountName(),
+    'roles' => array_values($account->getRoles()),
+  ];
+
+  // Latest job offers (node type: offre_emploi).
+  _bongolava_inject_nodes($variables, 'offre_emploi', 'bongolavaJobs', 10);
+
+  // Latest events (node type: evenement).
+  _bongolava_inject_nodes($variables, 'evenement', 'bongolavaEvents', 6);
+
+  // Latest talent profiles (node type: profil).
+  _bongolava_inject_nodes($variables, 'profil', 'bongolavaProfiles', 6);
+}
+
+/**
+ * Helper: query published nodes and inject them into drupalSettings.
+ *
+ * @param array  $variables   Page preprocess variables (by reference).
+ * @param string $bundle      Node bundle machine name.
+ * @param string $settingsKey drupalSettings key under bongolava.
+ * @param int    $limit       Maximum number of nodes to load.
+ */
+function _bongolava_inject_nodes(array &$variables, string $bundle, string $settingsKey, int $limit): void {
+  try {
+    $query = \Drupal::entityQuery('node')
+      ->condition('type', $bundle)
+      ->condition('status', 1)
+      ->sort('created', 'DESC')
+      ->range(0, $limit)
+      ->accessCheck(FALSE);
+
+    $nids = $query->execute();
+    if (empty($nids)) {
+      $variables['#attached']['drupalSettings']['bongolava'][$settingsKey] = [];
+      return;
+    }
+
+    $nodes = Node::loadMultiple($nids);
+    $items = [];
+    $dateFormatter = \Drupal::service('date.formatter');
+
+    foreach ($nodes as $node) {
+      $item = [
+        'id'      => (int) $node->id(),
+        'title'   => $node->getTitle(),
+        'created' => $dateFormatter->format($node->getCreatedTime(), 'short'),
+        'path'    => $node->toUrl()->toString(),
+      ];
+
+      // Optional image field.
+      if ($node->hasField('field_image') && !$node->get('field_image')->isEmpty()) {
+        /** @var \Drupal\image\Plugin\Field\FieldType\ImageItem $img */
+        $img = $node->get('field_image')->first();
+        $file = $img->entity;
+        if ($file) {
+          $item['image'] = \Drupal::service('file_url_generator')->generateAbsoluteString($file->getFileUri());
+        }
+      }
+
+      // Optional body summary.
+      if ($node->hasField('body') && !$node->get('body')->isEmpty()) {
+        $item['summary'] = $node->get('body')->summary ?: mb_substr(strip_tags($node->get('body')->value ?? ''), 0, 160);
+      }
+
+      $items[] = $item;
+    }
+
+    $variables['#attached']['drupalSettings']['bongolava'][$settingsKey] = $items;
+  }
+  catch (\Throwable $e) {
+    $variables['#attached']['drupalSettings']['bongolava'][$settingsKey] = [];
+    \Drupal::logger('bongolava')->warning('Could not load @bundle nodes: @msg', [
+      '@bundle' => $bundle,
+      '@msg'    => $e->getMessage(),
+    ]);
+  }
+}

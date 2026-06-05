@@ -1,0 +1,879 @@
+{
+  "info": {
+    "title": "Bongolava Jobs API",
+    "version": "1.0.0",
+    "description": "All JSON endpoints served by the bongolava_job Drupal module. Base URL: /bongolava_job. Authentication uses Bearer tokens (Authorization: Bearer <token>). All request bodies are JSON unless noted as multipart/form-data.",
+    "base_url": "/bongolava_job",
+    "auth_header": "Authorization: Bearer <token>"
+  },
+
+  "endpoints": {
+
+    "auth": {
+      "description": "Authentication — login, logout, current user, registration",
+
+      "login": {
+        "method": "POST",
+        "path": "/bongolava_job/login",
+        "auth_required": false,
+        "used_by": ["LoginView.vue"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": {
+            "email": "string (required) — user email address",
+            "password": "string (required) — plain-text password"
+          }
+        },
+        "response_200": {
+          "user": {
+            "id": 1,
+            "email": "admin@bongolavajobs.mg",
+            "name": "admin@bongolavajobs.mg",
+            "created_at": "2026-01-01T00:00:00+00:00"
+          },
+          "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+          "role": "candidate | recruiter | admin",
+          "profile": {
+            "id": 1,
+            "user_id": 1,
+            "first_name": "Sarah",
+            "last_name": "Rakoto",
+            "job_target": "Ingénieure Agronome",
+            "location": "Tsiroanomandidy",
+            "skills": ["Agriculture", "Irrigation"],
+            "experience": "5 ans",
+            "bio": "...",
+            "phone": "+261 34 56 78 90",
+            "photo_url": null,
+            "cv_url": null,
+            "available": true,
+            "created_at": "2026-01-15T00:00:00+00:00"
+          }
+        },
+        "response_401": {
+          "message": "The given data was invalid.",
+          "errors": {
+            "email": ["These credentials do not match our records."]
+          }
+        },
+        "response_422": {
+          "message": "The given data was invalid.",
+          "errors": {
+            "email": ["The email field is required."],
+            "password": ["The password field is required."]
+          }
+        }
+      },
+
+      "logout": {
+        "method": "POST",
+        "path": "/bongolava_job/logout",
+        "auth_required": true,
+        "request": { "body": {} },
+        "response_200": {
+          "message": "Logged out successfully."
+        }
+      },
+
+      "me": {
+        "method": "GET",
+        "path": "/bongolava_job/me",
+        "auth_required": true,
+        "used_by": ["App.vue — session restore on page load"],
+        "response_200": {
+          "user": { "id": 1, "email": "admin@bongolavajobs.mg", "name": "admin@bongolavajobs.mg" },
+          "role": "candidate | recruiter | admin",
+          "profile": "same shape as login.profile (candidate or recruiter)"
+        }
+      },
+
+      "register_candidate": {
+        "method": "POST",
+        "path": "/bongolava_job/register/candidate",
+        "auth_required": false,
+        "used_by": ["RegisterView.vue (role=candidat)"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": {
+            "email": "string (required)",
+            "password": "string (required, min 8 chars)",
+            "first_name": "string (required)",
+            "last_name": "string (required)",
+            "phone": "string (optional)"
+          }
+        },
+        "response_200": "same shape as login response (user + token + role + profile)"
+      },
+
+      "register_recruiter": {
+        "method": "POST",
+        "path": "/bongolava_job/register/recruiter",
+        "auth_required": false,
+        "used_by": ["RegisterView.vue (role=recruteur)"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": {
+            "email": "string (required)",
+            "password": "string (required, min 8 chars)",
+            "organization": "string (required) — company name",
+            "phone": "string (optional)"
+          }
+        },
+        "response_200": "same shape as login response (user + token + role + profile)"
+      }
+    },
+
+    "jobs": {
+      "description": "Job offers — public listing, detail, recruiter CRUD",
+
+      "list": {
+        "method": "GET",
+        "path": "/bongolava_job/jobs",
+        "auth_required": false,
+        "used_by": ["JobsView.vue", "FeaturedJobsSection.vue", "HomeView.vue (drupalSettings.bongolavaJobs)"],
+        "query_params": {
+          "search": "string — full-text search on title and tags",
+          "sector": "agriculture | tourisme | industrie | education | informatique | transport | services",
+          "type": "CDI | CDD | Stage | Freelance",
+          "location": "Tsiroanomandidy | Maintirano | Bongolava | Télé-travail",
+          "sort": "pertinence | recent | salary",
+          "page": "integer (default: 1)",
+          "per_page": "integer (default: configured in module)"
+        },
+        "response_200_without_page": [
+          {
+            "id": 1,
+            "title": "Ingénieur Agronome",
+            "company": "Ferme de Bongolava",
+            "location": "Tsiroanomandidy",
+            "type": "CDI",
+            "salary": "1 200 000 Ar",
+            "urgent": true,
+            "remote": false,
+            "sector": "agriculture",
+            "tags": ["Agriculture", "Élevage"],
+            "created_at": "2026-01-15T00:00:00+00:00",
+            "expires_at": "2026-02-15T00:00:00+00:00",
+            "recruiter_id": 1,
+            "recruiter_name": "Ferme de Bongolava",
+            "recruiter_logo_url": null
+          }
+        ],
+        "response_200_with_page": {
+          "data": "array of job objects",
+          "total": 42,
+          "per_page": 10,
+          "current_page": 1,
+          "last_page": 5
+        }
+      },
+
+      "get": {
+        "method": "GET",
+        "path": "/bongolava_job/jobs/{id}",
+        "auth_required": false,
+        "used_by": ["JobDetailView.vue"],
+        "response_200": {
+          "id": 1,
+          "title": "Ingénieur Agronome",
+          "company": "Ferme de Bongolava",
+          "location": "Tsiroanomandidy",
+          "type": "CDI",
+          "salary": "1 200 000 Ar",
+          "urgent": true,
+          "remote": false,
+          "sector": "agriculture",
+          "description": "Full description text...",
+          "responsibilities": ["Superviser les opérations...", "Optimiser les rendements..."],
+          "requirements": ["Diplôme en agronomie...", "Minimum 3 ans d'expérience..."],
+          "tags": ["Agriculture", "Élevage", "Durable"],
+          "created_at": "2026-01-15T00:00:00+00:00",
+          "expires_at": "2026-02-15T00:00:00+00:00",
+          "recruiter": {
+            "id": 1,
+            "name": "Jean Rakoto",
+            "organization": "Ferme de Bongolava",
+            "email": "recrutement@fermebongolava.mg",
+            "phone": "+261 34 12 345 67",
+            "logo_url": null
+          }
+        },
+        "response_404": { "message": "Not Found." }
+      },
+
+      "create": {
+        "method": "POST",
+        "path": "/bongolava_job/jobs",
+        "auth_required": true,
+        "roles": ["recruiter"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": {
+            "title": "string (required)",
+            "description": "string (required)",
+            "location": "string (required)",
+            "type": "CDI | CDD | Stage | Freelance (optional)",
+            "salary": "string (optional) — e.g. '1 200 000 Ar'",
+            "sector": "string (optional)",
+            "tags": "array of strings (optional)",
+            "urgent": "boolean (optional, default false)",
+            "remote": "boolean (optional, default false)",
+            "responsibilities": "array of strings (optional)",
+            "requirements": "array of strings (optional)",
+            "contact_email": "string (optional, defaults to authenticated user email)",
+            "expires_at": "ISO 8601 date string (optional)"
+          }
+        },
+        "response_201": "job object (same shape as get)"
+      },
+
+      "update": {
+        "method": "PUT",
+        "path": "/bongolava_job/jobs/{id}",
+        "auth_required": true,
+        "roles": ["recruiter (owner only)"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": "any subset of create fields"
+        },
+        "response_200": "updated job object"
+      },
+
+      "delete": {
+        "method": "DELETE",
+        "path": "/bongolava_job/jobs/{id}",
+        "auth_required": true,
+        "roles": ["recruiter (owner only)"],
+        "response_200": { "message": "Job deleted successfully." }
+      },
+
+      "my_jobs": {
+        "method": "GET",
+        "path": "/bongolava_job/my-jobs",
+        "auth_required": true,
+        "roles": ["recruiter"],
+        "response_200": "array of job objects belonging to authenticated recruiter"
+      }
+    },
+
+    "candidates": {
+      "description": "Candidate profiles — public listing, detail, own profile, file uploads",
+
+      "list": {
+        "method": "GET",
+        "path": "/bongolava_job/candidates",
+        "auth_required": false,
+        "used_by": ["ProfilsView.vue"],
+        "query_params": {
+          "search": "string — name, job_target or skill",
+          "location": "Tsiroanomandidy | Maintirano | Bongolava | Télé-travail | all",
+          "page": "integer"
+        },
+        "response_200": [
+          {
+            "id": 1,
+            "user_id": 5,
+            "first_name": "Sarah",
+            "last_name": "Rakoto",
+            "job_target": "Ingénieure Agronome",
+            "location": "Tsiroanomandidy",
+            "skills": ["Agriculture", "Irrigation", "Gestion"],
+            "experience": "5 ans",
+            "available": true,
+            "photo_url": null,
+            "created_at": "2026-01-15T00:00:00+00:00"
+          }
+        ]
+      },
+
+      "get": {
+        "method": "GET",
+        "path": "/bongolava_job/candidates/{id}",
+        "auth_required": false,
+        "used_by": ["ProfilDetailView.vue"],
+        "response_200": {
+          "id": 1,
+          "user_id": 5,
+          "first_name": "Sarah",
+          "last_name": "Rakoto",
+          "job_target": "Ingénieure Agronome",
+          "location": "Tsiroanomandidy",
+          "age": 28,
+          "address": "Lot 123, Ambohibary",
+          "skills": ["Agriculture", "Irrigation", "Gestion", "Formation", "Développement durable"],
+          "experience": "5 ans",
+          "bio": "Ingénieure agronome passionnée...",
+          "education": [
+            { "degree": "Master en Agronomie", "school": "Université d'Antananarivo", "year": "2020" },
+            { "degree": "Licence en Biologie Végétale", "school": "Université de Mahajanga", "year": "2017" }
+          ],
+          "certifications": ["Formation en Agriculture Durable (2022)"],
+          "languages": ["Français", "Anglais", "Malagasy"],
+          "phone": "+261 34 56 78 90",
+          "email": "sarah.rakoto@email.mg",
+          "photo_url": null,
+          "cv_url": null,
+          "available": true,
+          "created_at": "2026-01-15T00:00:00+00:00"
+        }
+      },
+
+      "my_profile": {
+        "method": "GET",
+        "path": "/bongolava_job/my-candidate-profile",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "response_200": "full candidate object (same shape as get)"
+      },
+
+      "update_my_profile": {
+        "method": "PUT",
+        "path": "/bongolava_job/my-candidate-profile",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": {
+            "first_name": "string (optional)",
+            "last_name": "string (optional)",
+            "job_target": "string (optional)",
+            "location": "string (optional)",
+            "age": "integer (optional)",
+            "address": "string (optional)",
+            "skills": "array of strings (optional)",
+            "experience": "string (optional)",
+            "bio": "string (optional)",
+            "education": "array of {degree, school, year} (optional)",
+            "certifications": "array of strings (optional)",
+            "languages": "array of strings (optional)",
+            "phone": "string (optional)",
+            "available": "boolean (optional)"
+          }
+        },
+        "response_200": "updated candidate profile object"
+      },
+
+      "upload_photo": {
+        "method": "POST",
+        "path": "/bongolava_job/candidate/upload-photo",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "request": {
+          "Content-Type": "multipart/form-data",
+          "fields": { "photo": "image file — jpg, jpeg, png, webp" }
+        },
+        "response_200": { "photo_path": "photos/2026-01/filename.jpg" }
+      },
+
+      "upload_cv": {
+        "method": "POST",
+        "path": "/bongolava_job/candidate/upload-cv",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "request": {
+          "Content-Type": "multipart/form-data",
+          "fields": { "cv": "PDF file" }
+        },
+        "response_200": { "cv_path": "cvs/2026-01/cv.pdf" }
+      },
+
+      "download_cv": {
+        "method": "GET",
+        "path": "/bongolava_job/candidate/download-cv",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "response": "binary PDF file (Content-Disposition: attachment)"
+      },
+
+      "delete_cv": {
+        "method": "DELETE",
+        "path": "/bongolava_job/candidate/delete-cv",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "response_200": { "message": "CV deleted successfully." }
+      }
+    },
+
+    "recruiters": {
+      "description": "Recruiter own profile and logo upload",
+
+      "my_profile": {
+        "method": "GET",
+        "path": "/bongolava_job/my-recruiter-profile",
+        "auth_required": true,
+        "roles": ["recruiter"],
+        "response_200": {
+          "id": 1,
+          "user_id": 3,
+          "organization": "Ferme de Bongolava",
+          "sector": "agriculture",
+          "description": "...",
+          "website": "https://example.mg",
+          "location": "Tsiroanomandidy",
+          "phone": "+261 34 12 345 67",
+          "email": "contact@fermebongolava.mg",
+          "logo_url": null,
+          "created_at": "2026-01-01T00:00:00+00:00"
+        }
+      },
+
+      "update_my_profile": {
+        "method": "PUT",
+        "path": "/bongolava_job/my-recruiter-profile",
+        "auth_required": true,
+        "roles": ["recruiter"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": {
+            "organization": "string (optional)",
+            "sector": "string (optional)",
+            "description": "string (optional)",
+            "website": "string (optional)",
+            "location": "string (optional)",
+            "phone": "string (optional)"
+          }
+        },
+        "response_200": "updated recruiter profile object"
+      },
+
+      "upload_logo": {
+        "method": "POST",
+        "path": "/bongolava_job/recruiter/upload-logo",
+        "auth_required": true,
+        "roles": ["recruiter"],
+        "request": {
+          "Content-Type": "multipart/form-data",
+          "fields": { "logo": "image file — jpg, jpeg, png, webp" }
+        },
+        "response_200": { "logo_path": "logos/2026-01/logo.png" }
+      }
+    },
+
+    "applications": {
+      "description": "Job applications — submit, list for candidate or recruiter, update status",
+
+      "apply": {
+        "method": "POST",
+        "path": "/bongolava_job/jobs/{job_id}/apply",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "used_by": ["JobDetailView.vue — 'Postuler' button"],
+        "request": {
+          "Content-Type": "multipart/form-data",
+          "fields": {
+            "name": "string (optional — defaults to user display name)",
+            "email": "string (optional — defaults to user email)",
+            "phone": "string (optional)",
+            "cover_letter": "string (optional)",
+            "cv": "PDF file (optional — uses profile CV if omitted)"
+          }
+        },
+        "response_201": {
+          "id": 1,
+          "job_id": 1,
+          "job_title": "Ingénieur Agronome",
+          "company": "Ferme de Bongolava",
+          "candidate_id": 1,
+          "name": "Sarah Rakoto",
+          "email": "sarah.rakoto@email.mg",
+          "phone": "+261 34 56 78 90",
+          "cover_letter": "...",
+          "cv_url": null,
+          "status": "pending",
+          "created_at": "2026-01-20T00:00:00+00:00"
+        }
+      },
+
+      "candidate_applications": {
+        "method": "GET",
+        "path": "/bongolava_job/candidate/applications",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "response_200": [
+          {
+            "id": 1,
+            "job_id": 1,
+            "job_title": "Ingénieur Agronome",
+            "company": "Ferme de Bongolava",
+            "status": "pending | reviewed | accepted | rejected",
+            "created_at": "2026-01-20T00:00:00+00:00"
+          }
+        ]
+      },
+
+      "recruiter_applications": {
+        "method": "GET",
+        "path": "/bongolava_job/recruiter/applications",
+        "auth_required": true,
+        "roles": ["recruiter"],
+        "response_200": [
+          {
+            "id": 1,
+            "job_id": 1,
+            "job_title": "Ingénieur Agronome",
+            "candidate_id": 1,
+            "name": "Sarah Rakoto",
+            "email": "sarah.rakoto@email.mg",
+            "phone": "+261 34 56 78 90",
+            "cover_letter": "...",
+            "cv_url": null,
+            "status": "pending",
+            "created_at": "2026-01-20T00:00:00+00:00"
+          }
+        ]
+      },
+
+      "update_application": {
+        "method": "PUT",
+        "path": "/bongolava_job/recruiter/applications/{id}",
+        "auth_required": true,
+        "roles": ["recruiter"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": {
+            "status": "pending | reviewed | accepted | rejected (required)"
+          }
+        },
+        "response_200": "updated application object"
+      }
+    },
+
+    "saved_jobs": {
+      "description": "Candidate saved/bookmarked jobs",
+
+      "list": {
+        "method": "GET",
+        "path": "/bongolava_job/candidate/saved-jobs",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "response_200": "array of job objects"
+      },
+
+      "save": {
+        "method": "POST",
+        "path": "/bongolava_job/candidate/saved-jobs/{jobId}",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "request": { "body": {} },
+        "response_201": {
+          "id": 1,
+          "job_id": 1,
+          "candidate_id": 1,
+          "saved_at": "2026-01-20T00:00:00+00:00"
+        }
+      },
+
+      "delete": {
+        "method": "DELETE",
+        "path": "/bongolava_job/candidate/saved-jobs/{savedJobId}",
+        "auth_required": true,
+        "roles": ["candidate"],
+        "response_200": { "message": "Saved job removed." }
+      }
+    },
+
+    "events": {
+      "description": "Events — public listing, detail, public registration, admin CRUD",
+
+      "list": {
+        "method": "GET",
+        "path": "/bongolava_job/events",
+        "auth_required": false,
+        "used_by": ["EventsView.vue", "EventsSection.vue"],
+        "query_params": {
+          "search": "string — title or description",
+          "type": "Salon | Atelier | Conférence | Formation"
+        },
+        "response_200": [
+          {
+            "id": 1,
+            "title": "Forum de l'emploi Bongolava 2026",
+            "type": "Salon",
+            "date": "2026-07-15T09:00:00+00:00",
+            "end_date": "2026-07-15T17:00:00+00:00",
+            "location": "Tsiroanomandidy",
+            "address": "Salle de conférence de la DRJS",
+            "description": "...",
+            "capacity": 500,
+            "registered": 342,
+            "image_url": null,
+            "organizer": "Direction Régionale de la Jeunesse et des Sports",
+            "created_at": "2026-01-01T00:00:00+00:00"
+          }
+        ]
+      },
+
+      "get": {
+        "method": "GET",
+        "path": "/bongolava_job/events/{id}",
+        "auth_required": false,
+        "used_by": ["EventDetailView.vue"],
+        "response_200": {
+          "id": 1,
+          "title": "Forum de l'emploi Bongolava 2026",
+          "type": "Salon",
+          "date": "2026-07-15T09:00:00+00:00",
+          "end_date": "2026-07-15T17:00:00+00:00",
+          "location": "Tsiroanomandidy",
+          "address": "Salle de conférence de la DRJS, Tsiroanomandidy",
+          "description": "Short description...",
+          "long_description": "Full detailed description with program...",
+          "capacity": 500,
+          "registered": 342,
+          "image_url": null,
+          "organizer": "Direction Régionale de la Jeunesse et des Sports",
+          "contact_email": "forum@bongolavajobs.mg",
+          "contact_phone": "+261 34 49 000 00",
+          "created_at": "2026-01-01T00:00:00+00:00"
+        }
+      },
+
+      "register": {
+        "method": "POST",
+        "path": "/bongolava_job/events/{id}/register",
+        "auth_required": false,
+        "used_by": ["EventDetailView.vue — 'S'inscrire' button"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": {
+            "name": "string (required)",
+            "email": "string (required)",
+            "phone": "string (required)"
+          }
+        },
+        "response_201": {
+          "id": 1,
+          "event_id": 1,
+          "name": "Jean Randrian",
+          "email": "jean@email.mg",
+          "phone": "+261 34 00 00 00",
+          "registered_at": "2026-01-20T00:00:00+00:00"
+        },
+        "response_422_full": {
+          "message": "Registration failed.",
+          "errors": { "event": ["Event full or not found."] }
+        }
+      },
+
+      "create": {
+        "method": "POST",
+        "path": "/bongolava_job/events",
+        "auth_required": true,
+        "roles": ["admin"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": {
+            "title": "string (required)",
+            "type": "Salon | Atelier | Conférence | Formation (required)",
+            "date": "ISO 8601 datetime (required)",
+            "end_date": "ISO 8601 datetime (optional)",
+            "location": "string (required)",
+            "address": "string (optional)",
+            "description": "string (optional)",
+            "long_description": "string (optional)",
+            "capacity": "integer (optional)",
+            "image_url": "string (optional)",
+            "organizer": "string (optional)",
+            "contact_email": "string (optional)",
+            "contact_phone": "string (optional)"
+          }
+        },
+        "response_201": "event object"
+      },
+
+      "update": {
+        "method": "PUT",
+        "path": "/bongolava_job/events/{id}",
+        "auth_required": true,
+        "roles": ["admin"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": "any subset of create fields"
+        },
+        "response_200": "updated event object"
+      },
+
+      "delete": {
+        "method": "DELETE",
+        "path": "/bongolava_job/events/{id}",
+        "auth_required": true,
+        "roles": ["admin"],
+        "response_200": { "message": "Event deleted successfully." }
+      }
+    },
+
+    "contact": {
+      "description": "Contact form and admin message management",
+
+      "submit": {
+        "method": "POST",
+        "path": "/bongolava_job/contact",
+        "auth_required": false,
+        "used_by": ["ContactView.vue"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": {
+            "name": "string (required)",
+            "email": "string (required)",
+            "subject": "string (optional)",
+            "message": "string (required)"
+          }
+        },
+        "response_201": {
+          "message": "Message sent successfully.",
+          "data": {
+            "id": 1,
+            "name": "Jean Rakoto",
+            "email": "jean@example.mg",
+            "subject": "Question sur les offres",
+            "message": "Bonjour...",
+            "read": false,
+            "created_at": "2026-01-20T00:00:00+00:00"
+          }
+        }
+      },
+
+      "list": {
+        "method": "GET",
+        "path": "/bongolava_job/contacts",
+        "auth_required": true,
+        "roles": ["admin"],
+        "response_200": "array of contact message objects"
+      },
+
+      "mark_read": {
+        "method": "PUT",
+        "path": "/bongolava_job/admin/messages/{id}/read",
+        "auth_required": true,
+        "roles": ["admin"],
+        "request": { "body": {} },
+        "response_200": "updated message object with read: true"
+      },
+
+      "delete": {
+        "method": "DELETE",
+        "path": "/bongolava_job/admin/messages/{id}",
+        "auth_required": true,
+        "roles": ["admin"],
+        "response_200": { "message": "Message deleted successfully." }
+      }
+    },
+
+    "admin_jobs": {
+      "description": "Admin job moderation",
+
+      "pending": {
+        "method": "GET",
+        "path": "/bongolava_job/admin/jobs/pending",
+        "auth_required": true,
+        "roles": ["admin"],
+        "response_200": "array of job objects with status: pending"
+      },
+
+      "approve": {
+        "method": "POST",
+        "path": "/bongolava_job/admin/jobs/{id}/approve",
+        "auth_required": true,
+        "roles": ["admin"],
+        "request": { "body": {} },
+        "response_200": "approved job object"
+      },
+
+      "reject": {
+        "method": "POST",
+        "path": "/bongolava_job/admin/jobs/{id}/reject",
+        "auth_required": true,
+        "roles": ["admin"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": { "reason": "string (optional)" }
+        },
+        "response_200": "rejected job object"
+      },
+
+      "force_expire": {
+        "method": "POST",
+        "path": "/bongolava_job/admin/jobs/force-expire",
+        "auth_required": true,
+        "roles": ["admin"],
+        "description": "Marks all jobs past their expires_at as expired",
+        "request": { "body": {} },
+        "response_200": { "message": "Expired N jobs." }
+      }
+    },
+
+    "admin_users": {
+      "description": "Admin user management",
+
+      "list": {
+        "method": "GET",
+        "path": "/bongolava_job/admin/users",
+        "auth_required": true,
+        "roles": ["admin"],
+        "response_200": [
+          {
+            "id": 1,
+            "email": "user@example.mg",
+            "name": "user@example.mg",
+            "role": "candidate | recruiter",
+            "status": 1,
+            "created_at": "2026-01-01T00:00:00+00:00"
+          }
+        ]
+      },
+
+      "update_status": {
+        "method": "PUT",
+        "path": "/bongolava_job/admin/users/{id}/status",
+        "auth_required": true,
+        "roles": ["admin"],
+        "request": {
+          "Content-Type": "application/json",
+          "body": { "status": "0 | 1 — block or unblock user" }
+        },
+        "response_200": "updated user object"
+      }
+    }
+  },
+
+  "common_error_responses": {
+    "401_unauthenticated": {
+      "status": 401,
+      "body": { "message": "Unauthenticated." }
+    },
+    "403_forbidden": {
+      "status": 403,
+      "body": { "message": "Forbidden." }
+    },
+    "404_not_found": {
+      "status": 404,
+      "body": { "message": "Not Found." }
+    },
+    "422_validation": {
+      "status": 422,
+      "body": {
+        "message": "The given data was invalid.",
+        "errors": {
+          "field_name": ["Error message 1.", "Error message 2."]
+        }
+      }
+    }
+  },
+
+  "vue_integration": {
+    "base_url_helper": "All API calls from Vue use: window.__drupalBasePath + 'bongolava_job/' + endpoint",
+    "auth_storage": "Bearer token stored in localStorage key: bongolava_token",
+    "views_to_endpoints": {
+      "HomeView.vue": "drupalSettings.bongolava.bongolavaJobs (preloaded server-side) + /bongolava_job/events",
+      "JobsView.vue": "GET /bongolava_job/jobs?search=&sector=&type=&location=&sort=&page=",
+      "JobDetailView.vue": "GET /bongolava_job/jobs/{id}  |  POST /bongolava_job/jobs/{id}/apply",
+      "ProfilsView.vue": "GET /bongolava_job/candidates?search=&location=&page=",
+      "ProfilDetailView.vue": "GET /bongolava_job/candidates/{id}",
+      "EventsView.vue": "GET /bongolava_job/events?search=&type=",
+      "EventDetailView.vue": "GET /bongolava_job/events/{id}  |  POST /bongolava_job/events/{id}/register",
+      "LoginView.vue": "POST /bongolava_job/login",
+      "RegisterView.vue": "POST /bongolava_job/register/candidate  OR  POST /bongolava_job/register/recruiter",
+      "ContactView.vue": "POST /bongolava_job/contact"
+    }
+  }
+}

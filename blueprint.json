@@ -1,0 +1,472 @@
+{
+  "drupal": {
+
+    "taxonomies": [
+      {
+        "machine_name": "secteur",
+        "label": "Secteur d'activité",
+        "description": "Secteurs économiques des offres d'emploi"
+      },
+      {
+        "machine_name": "competence",
+        "label": "Compétence",
+        "description": "Compétences techniques et transversales des candidats"
+      },
+      {
+        "machine_name": "type_contrat",
+        "label": "Type de contrat",
+        "description": "CDI, CDD, Stage, Freelance"
+      },
+      {
+        "machine_name": "type_evenement",
+        "label": "Type d'événement",
+        "description": "Salon, Atelier, Conférence, Formation"
+      },
+      {
+        "machine_name": "localisation",
+        "label": "Localisation",
+        "description": "Villes et zones de la région Bongolava"
+      }
+    ],
+
+    "content_types": [
+
+      {
+        "machine_name": "offre_emploi",
+        "label": "Offre d'emploi",
+        "description": "Offres publiées par les recruteurs de la région Bongolava",
+        "fields": [
+          {
+            "name": "company",
+            "label": "Entreprise / Recruteur",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "description",
+            "label": "Description du poste",
+            "type": "text_long",
+            "required": true
+          },
+          {
+            "name": "responsibilities",
+            "label": "Responsabilités",
+            "type": "text_long",
+            "required": false
+          },
+          {
+            "name": "requirements",
+            "label": "Profil recherché",
+            "type": "text_long",
+            "required": false
+          },
+          {
+            "name": "salary",
+            "label": "Salaire",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "type_contrat",
+            "label": "Type de contrat",
+            "type": "entity_reference_taxonomy",
+            "required": true
+          },
+          {
+            "name": "secteur",
+            "label": "Secteur",
+            "type": "entity_reference_taxonomy",
+            "required": true
+          },
+          {
+            "name": "localisation",
+            "label": "Localisation",
+            "type": "entity_reference_taxonomy",
+            "required": true
+          },
+          {
+            "name": "urgent",
+            "label": "Urgent",
+            "type": "boolean",
+            "required": false
+          },
+          {
+            "name": "remote",
+            "label": "Télétravail possible",
+            "type": "boolean",
+            "required": false
+          },
+          {
+            "name": "expires_at",
+            "label": "Date d'expiration",
+            "type": "datetime",
+            "required": false
+          },
+          {
+            "name": "contact_email",
+            "label": "Email de contact",
+            "type": "email",
+            "required": false
+          },
+          {
+            "name": "contact_phone",
+            "label": "Téléphone de contact",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "recruiter_logo",
+            "label": "Logo recruteur",
+            "type": "image",
+            "required": false
+          },
+          {
+            "name": "status_offre",
+            "label": "Statut de l'offre",
+            "type": "list_string",
+            "required": true,
+            "allowed_values": ["pending", "published", "rejected", "expired"]
+          },
+          {
+            "name": "views_count",
+            "label": "Nombre de vues",
+            "type": "integer",
+            "required": false
+          }
+        ]
+      },
+
+      {
+        "machine_name": "profil_candidat",
+        "label": "Profil candidat",
+        "description": "Profil public d'un demandeur d'emploi de la région",
+        "fields": [
+          {
+            "name": "first_name",
+            "label": "Prénom",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "last_name",
+            "label": "Nom",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "job_target",
+            "label": "Poste recherché",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "bio",
+            "label": "Présentation",
+            "type": "text_long",
+            "required": false
+          },
+          {
+            "name": "experience",
+            "label": "Années d'expérience",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "localisation",
+            "label": "Localisation",
+            "type": "entity_reference_taxonomy",
+            "required": false
+          },
+          {
+            "name": "competences",
+            "label": "Compétences",
+            "type": "entity_reference_taxonomy",
+            "required": false,
+            "cardinality": -1
+          },
+          {
+            "name": "education",
+            "label": "Formation",
+            "type": "text_long",
+            "required": false
+          },
+          {
+            "name": "certifications",
+            "label": "Certifications",
+            "type": "text_long",
+            "required": false
+          },
+          {
+            "name": "languages",
+            "label": "Langues parlées",
+            "type": "string",
+            "required": false,
+            "cardinality": -1
+          },
+          {
+            "name": "phone",
+            "label": "Téléphone",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "email_contact",
+            "label": "Email de contact",
+            "type": "email",
+            "required": false
+          },
+          {
+            "name": "photo",
+            "label": "Photo de profil",
+            "type": "image",
+            "required": false
+          },
+          {
+            "name": "cv",
+            "label": "CV (PDF)",
+            "type": "file",
+            "required": false
+          },
+          {
+            "name": "available",
+            "label": "Disponible immédiatement",
+            "type": "boolean",
+            "required": false
+          },
+          {
+            "name": "age",
+            "label": "Âge",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "address",
+            "label": "Adresse",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "website",
+            "label": "Site web / Portfolio",
+            "type": "link",
+            "required": false
+          }
+        ]
+      },
+
+      {
+        "machine_name": "evenement",
+        "label": "Événement",
+        "description": "Forums, ateliers, conférences organisés par la DRJS Bongolava",
+        "fields": [
+          {
+            "name": "type_evenement",
+            "label": "Type d'événement",
+            "type": "entity_reference_taxonomy",
+            "required": true
+          },
+          {
+            "name": "date_debut",
+            "label": "Date et heure de début",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "name": "date_fin",
+            "label": "Date et heure de fin",
+            "type": "datetime",
+            "required": false
+          },
+          {
+            "name": "localisation",
+            "label": "Ville",
+            "type": "entity_reference_taxonomy",
+            "required": true
+          },
+          {
+            "name": "address",
+            "label": "Adresse complète",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "description",
+            "label": "Description courte",
+            "type": "text_long",
+            "required": true
+          },
+          {
+            "name": "long_description",
+            "label": "Programme détaillé",
+            "type": "text_long",
+            "required": false
+          },
+          {
+            "name": "capacity",
+            "label": "Capacité maximale",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "registered_count",
+            "label": "Nombre d'inscrits",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "image",
+            "label": "Image de l'événement",
+            "type": "image",
+            "required": false
+          },
+          {
+            "name": "organizer",
+            "label": "Organisateur",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "contact_email",
+            "label": "Email de contact",
+            "type": "email",
+            "required": false
+          },
+          {
+            "name": "contact_phone",
+            "label": "Téléphone de contact",
+            "type": "string",
+            "required": false
+          }
+        ]
+      },
+
+      {
+        "machine_name": "inscription_evenement",
+        "label": "Inscription événement",
+        "description": "Enregistre les participants à un événement",
+        "fields": [
+          {
+            "name": "evenement_ref",
+            "label": "Événement",
+            "type": "entity_reference_node",
+            "required": true
+          },
+          {
+            "name": "participant_name",
+            "label": "Nom complet",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "participant_email",
+            "label": "Email",
+            "type": "email",
+            "required": true
+          },
+          {
+            "name": "participant_phone",
+            "label": "Téléphone",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "registered_at",
+            "label": "Date d'inscription",
+            "type": "datetime",
+            "required": false
+          }
+        ]
+      },
+
+      {
+        "machine_name": "candidature",
+        "label": "Candidature",
+        "description": "Candidature d'un utilisateur à une offre d'emploi",
+        "fields": [
+          {
+            "name": "offre_ref",
+            "label": "Offre d'emploi",
+            "type": "entity_reference_node",
+            "required": true
+          },
+          {
+            "name": "candidat_name",
+            "label": "Nom du candidat",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "candidat_email",
+            "label": "Email",
+            "type": "email",
+            "required": true
+          },
+          {
+            "name": "candidat_phone",
+            "label": "Téléphone",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "cover_letter",
+            "label": "Lettre de motivation",
+            "type": "text_long",
+            "required": false
+          },
+          {
+            "name": "cv_file",
+            "label": "CV (PDF)",
+            "type": "file",
+            "required": false
+          },
+          {
+            "name": "status_candidature",
+            "label": "Statut",
+            "type": "list_string",
+            "required": true,
+            "allowed_values": ["pending", "reviewed", "accepted", "rejected"]
+          }
+        ]
+      },
+
+      {
+        "machine_name": "message_contact",
+        "label": "Message de contact",
+        "description": "Messages envoyés via le formulaire de contact",
+        "fields": [
+          {
+            "name": "sender_name",
+            "label": "Nom de l'expéditeur",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "sender_email",
+            "label": "Email de l'expéditeur",
+            "type": "email",
+            "required": true
+          },
+          {
+            "name": "subject",
+            "label": "Sujet",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "message",
+            "label": "Message",
+            "type": "text_long",
+            "required": true
+          },
+          {
+            "name": "is_read",
+            "label": "Lu",
+            "type": "boolean",
+            "required": false
+          }
+        ]
+      }
+
+    ]
+  }
+}
