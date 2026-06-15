@@ -99,7 +99,7 @@ const cvInput = ref<HTMLInputElement | null>(null)
 
 const cvFullUrl = computed(() => {
   if (!profile.value?.cv_path) return null
-  return `http://bongolava.local/sites/default/files/bongolava_job/${profile.value.cv_path}`
+  return `/sites/bongolava/files/bongolava_job/${profile.value.cv_path}`
 })
 
 async function onCvChange(e: Event) {
