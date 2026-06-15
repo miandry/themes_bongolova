@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import {
   ArrowLeft, MapPin, Building2, Briefcase, Calendar,
   Heart, CheckCircle2, Zap, Share2,
@@ -9,16 +10,16 @@ import {
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import JobApplyForm from '../components/JobApplyForm.vue'
-import { apiGet } from '@/composables/api'
+import { useNodeStore } from '@/stores/node/node.store'
 import { asList } from '@/utils/apiData'
 
 const route = useRoute()
 const router = useRouter()
 const jobId = route.params.id as string
 
-const job = ref<Record<string, unknown> | null>(null)
-const loading = ref(true)
-const error = ref('')
+const nodeStore = useNodeStore()
+const { job, jobLoading, jobError } = storeToRefs(nodeStore)
+
 const applySuccess = ref(false)
 /** API returns recruiter_id only — build a safe display object (avoids render crash). */
 const recruiter = computed(() => {
@@ -46,26 +47,13 @@ const responsibilities = computed(() => asList(job.value?.responsibilities))
 const tags = computed(() => asList(job.value?.tags))
 
 async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    const data = await apiGet<Record<string, unknown>>(`bongolava_job/jobs/${jobId}`)
-    if (!data || typeof data !== 'object' || !data.id) {
-      error.value = 'Offre introuvable.'
-      job.value = null
-    } else {
-      job.value = data
-    }
-  } catch {
-    error.value = 'Offre introuvable.'
-    job.value = null
-  } finally {
-    loading.value = false
-  }
+  await nodeStore.fetchJobById(jobId)
 }
 
 const goBack = () => router.back()
-const formatDate = (date) => new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+const formatDate = (date?: string) => date
+  ? new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  : '—'
 
 onMounted(load)
 </script>
@@ -77,8 +65,8 @@ onMounted(load)
     <main class="flex-grow pt-20 pb-16">
       <div class="max-w-6xl mx-auto px-4 sm:px-6">
 
-        <div v-if="loading" class="text-center py-20 text-gray-500">Chargement…</div>
-        <div v-else-if="error" class="text-center py-20 text-red-500">{{ error }}</div>
+        <div v-if="jobLoading" class="text-center py-20 text-gray-500">Chargement…</div>
+        <div v-else-if="jobError" class="text-center py-20 text-red-500">{{ jobError }}</div>
         <template v-else-if="job">
 
         <!-- Bouton retour -->

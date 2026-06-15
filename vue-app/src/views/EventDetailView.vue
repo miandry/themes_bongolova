@@ -1,22 +1,23 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import {
   ArrowLeft, Calendar, MapPin, Clock, Users2,
   CheckCircle2, Share2, Phone, Mail, Loader2
 } from 'lucide-vue-next'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
-import { apiGet, apiPost } from '@/composables/api'
+import { useNodeStore } from '@/stores/node/node.store'
 import { displayText } from '@/utils/apiData'
 
 const route = useRoute()
 const router = useRouter()
 const eventId = route.params.id as string
 
-const event = ref<Record<string, unknown> | null>(null)
-const loading = ref(true)
-const error = ref('')
+const nodeStore = useNodeStore()
+const { event, eventLoading, eventError } = storeToRefs(nodeStore)
+
 const registering = ref(false)
 const regSuccess = ref(false)
 const regError = ref('')
@@ -54,22 +55,7 @@ const availablePlaces = computed(() => {
 })
 
 async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    const data = await apiGet<Record<string, unknown>>(`bongolava_job/events/${eventId}`)
-    if (!data || typeof data !== 'object' || !data.id) {
-      error.value = 'Événement introuvable.'
-      event.value = null
-    } else {
-      event.value = data
-    }
-  } catch {
-    error.value = 'Événement introuvable.'
-    event.value = null
-  } finally {
-    loading.value = false
-  }
+  await nodeStore.fetchEventById(eventId)
 }
 
 async function register() {
@@ -80,7 +66,7 @@ async function register() {
   }
   registering.value = true
   try {
-    await apiPost(`bongolava_job/events/${eventId}/register`, {
+    await nodeStore.registerEvent(eventId, {
       name: regName.value,
       email: regEmail.value,
       phone: regPhone.value,
@@ -103,11 +89,11 @@ const goBack = () => router.back()
     <Header />
     <main class="flex-grow pt-20 pb-16 px-4 bg-gradient-to-b from-gray-50 to-white">
       <div class="max-w-4xl mx-auto">
-        <div v-if="loading" class="flex justify-center items-center py-24">
+        <div v-if="eventLoading" class="flex justify-center items-center py-24">
           <Loader2 :size="36" class="animate-spin text-orange-400" />
         </div>
-        <div v-else-if="error" class="text-center py-20">
-          <p class="text-red-500 font-semibold">{{ error }}</p>
+        <div v-else-if="eventError" class="text-center py-20">
+          <p class="text-red-500 font-semibold">{{ eventError }}</p>
           <button @click="load" class="mt-4 px-5 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition">Réessayer</button>
         </div>
         <template v-else-if="event">

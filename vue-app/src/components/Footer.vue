@@ -1,6 +1,8 @@
 <script setup>
-import { canAccessProfils } from '@/composables/useAuth'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/auth/auth.store'
 
+const { canAccessProfils } = storeToRefs(useAuthStore())
 const currentYear = new Date().getFullYear()
 </script>
 

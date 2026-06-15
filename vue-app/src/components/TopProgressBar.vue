@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { isGlobalLoading } from '@/composables/useLoading'
+import { storeToRefs } from 'pinia'
+import { useUiStore } from '@/stores/ui/ui.store'
+
+const { isGlobalLoading } = storeToRefs(useUiStore())
 
 // Width of the progress bar (0–100). We animate it in stages so it feels alive.
 const width   = ref(0)

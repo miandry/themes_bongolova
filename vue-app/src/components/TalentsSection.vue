@@ -1,12 +1,22 @@
-<script setup>
-import { Users2, MapPin, CheckCircle2, ArrowRight, Briefcase } from 'lucide-vue-next'
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { Users2, MapPin, CheckCircle2, ArrowRight } from 'lucide-vue-next'
+import { useUserStore } from '@/stores/user/user.store'
+import { asList } from '@/utils/apiData'
 
-const candidates = [
-  { id: 1, first_name: "Sarah", last_name: "Rakoto", job_target: "Ingénieure Agronome", location: "Tsiroanomandidy", skills: ["Agriculture", "Irrigation", "Gestion"] },
-  { id: 2, first_name: "Jean", last_name: "Randrian", job_target: "Développeur Fullstack", location: "Télé-travail", skills: ["Vue.js", "Laravel", "MySQL"] },
-  { id: 3, first_name: "Hélène", last_name: "Razafy", job_target: "Chef de Projet BTP", location: "Maintirano", skills: ["Planification", "Conduite", "HSE"] },
-  { id: 4, first_name: "David", last_name: "Andria", job_target: "Guide Touristique", location: "Bongolava", skills: ["Anglais", "Histoire", "Gestion"] },
-]
+const userStore = useUserStore()
+const { topCandidates, candidatesLoading } = storeToRefs(userStore)
+
+onMounted(() => {
+  userStore.fetchCandidates({}).catch(() => {})
+})
+
+function getInitials(c: { first_name?: string; last_name?: string }) {
+  const f = String(c.first_name ?? '').trim()
+  const l = String(c.last_name ?? '').trim()
+  return ((f[0] ?? '') + (l[0] ?? '')).toUpperCase() || '??'
+}
 </script>
 
 <template>
@@ -23,13 +33,15 @@ const candidates = [
         <p class="text-gray-500 text-sm max-w-2xl mx-auto">Des profils qualifiés, prêts à rejoindre votre équipe</p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div v-for="candidate in candidates" :key="candidate.id" class="group relative bg-white/70 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
+      <div v-if="candidatesLoading" class="text-center py-12 text-gray-400">Chargement…</div>
+
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div v-for="candidate in topCandidates" :key="candidate.id" class="group relative bg-white/70 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
           <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"></div>
           <div class="p-5 text-center">
             <div class="relative inline-block mb-3">
               <div class="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold shadow-md overflow-hidden mx-auto">
-                <span>{{ candidate.first_name[0] }}{{ candidate.last_name[0] }}</span>
+                <span>{{ getInitials(candidate) }}</span>
               </div>
               <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
                 <CheckCircle2 :size="10" class="text-white" />
@@ -41,7 +53,7 @@ const candidates = [
               <MapPin :size="10" class="text-purple-500" /> {{ candidate.location }}
             </div>
             <div class="flex flex-wrap justify-center gap-1 mt-3 mb-4">
-              <span v-for="skill in candidate.skills" :key="skill" class="px-2 py-0.5 bg-gray-100 rounded-full text-[9px] text-gray-600">{{ skill }}</span>
+              <span v-for="skill in asList(candidate.skills).slice(0, 3)" :key="skill" class="px-2 py-0.5 bg-gray-100 rounded-full text-[9px] text-gray-600">{{ skill }}</span>
             </div>
             <a :href="`/profils/${candidate.id}`">
               <button class="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg text-xs font-bold hover:shadow-md transition-all duration-300 flex items-center justify-center gap-1 group/btn">

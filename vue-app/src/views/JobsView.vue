@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { RouterLink } from 'vue-router'
 import {
   Search, MapPin, Building2,
@@ -8,7 +9,13 @@ import {
 } from 'lucide-vue-next'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
-import { apiGet } from '@/composables/api'
+import { useNodeStore } from '@/stores/node/node.store'
+import { useTaxonomyStore } from '@/stores/taxonomy/taxonomy.store'
+
+const nodeStore = useNodeStore()
+const taxonomyStore = useTaxonomyStore()
+const { jobs, jobsLoading, jobsError } = storeToRefs(nodeStore)
+const { sectors, contractTypes, locations } = storeToRefs(taxonomyStore)
 
 // --- Filtres et Tri ---
 const searchQuery = ref('')
@@ -18,44 +25,18 @@ const selectedLocation = ref('')
 const sortBy = ref('pertinence')
 const viewMode = ref('grid')
 
-const sectors = ['agriculture', 'tourisme', 'industrie', 'education', 'informatique', 'transport', 'services']
-const types = ['CDI', 'CDD', 'Stage', 'Freelance']
-const locations = ['Tsiroanomandidy', 'Maintirano', 'Bongolava', 'Télé-travail']
-
-const getSectorLabel = (sector) => {
-  const labels = {
-    agriculture: 'Agriculture & Élevage',
-    tourisme: 'Tourisme & Hôtellerie',
-    industrie: 'Industrie & BTP',
-    education: 'Éducation & Santé',
-    informatique: 'Informatique & Commerce',
-    transport: 'Transports & Logistique',
-    services: 'Services & Administration'
-  }
-  return labels[sector] || sector
-}
-
-const jobs = ref([])
-const loading = ref(false)
-const fetchError = ref('')
+const getSectorLabel = (sector: string) => taxonomyStore.sectorLabel(sector)
 
 async function loadJobs() {
-  loading.value = true
-  fetchError.value = ''
   try {
-    const params = new URLSearchParams()
-    if (searchQuery.value) params.set('keyword', searchQuery.value)
-    if (selectedSector.value) params.set('sector', selectedSector.value)
-    if (selectedType.value) params.set('contract_type', selectedType.value)
-    if (selectedLocation.value) params.set('location', selectedLocation.value)
-    if (sortBy.value === 'recent') params.set('sort', 'recent')
-    const data = await apiGet('bongolava_job/jobs?' + params.toString())
-    jobs.value = Array.isArray(data) ? data : ((data as { data?: unknown[] }).data ?? [])
-  } catch {
-    fetchError.value = 'Impossible de charger les offres.'
-  } finally {
-    loading.value = false
-  }
+    await nodeStore.searchJobs({
+      keyword: searchQuery.value || undefined,
+      sector: selectedSector.value || undefined,
+      contract_type: selectedType.value || undefined,
+      location: selectedLocation.value || undefined,
+      sort: sortBy.value === 'recent' ? 'recent' : undefined,
+    })
+  } catch { /* error in store */ }
 }
 
 onMounted(() => loadJobs())
@@ -66,7 +47,7 @@ watch([searchQuery, selectedSector, selectedType, selectedLocation, sortBy], () 
   debounceTimer = setTimeout(() => loadJobs(), 350)
 })
 
-const formatSalary = (job) => job.salary
+const formatSalary = (job: { salary?: string }) => job.salary
 </script>
 
 <template>
@@ -110,21 +91,21 @@ const formatSalary = (job) => job.salary
               <div class="relative min-w-[140px]">
                 <select v-model="selectedSector" class="w-full appearance-none pl-4 pr-10 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 text-sm font-medium cursor-pointer transition-all">
                   <option value="">Tous secteurs</option>
-                  <option v-for="s in sectors" :key="s" :value="s">{{ getSectorLabel(s) }}</option>
+                  <option v-for="s in sectors" :key="s.value" :value="s.value">{{ s.label }}</option>
                 </select>
                 <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" :size="18" />
               </div>
               <div class="relative min-w-[120px]">
                 <select v-model="selectedType" class="w-full appearance-none pl-4 pr-10 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 text-sm font-medium cursor-pointer transition-all">
                   <option value="">Tous types</option>
-                  <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
+                  <option v-for="t in contractTypes" :key="t.value" :value="t.value">{{ t.label }}</option>
                 </select>
                 <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" :size="18" />
               </div>
               <div class="relative min-w-[140px]">
                 <select v-model="selectedLocation" class="w-full appearance-none pl-4 pr-10 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-gray-700 text-sm font-medium cursor-pointer transition-all">
                   <option value="">Toutes villes</option>
-                  <option v-for="l in locations" :key="l" :value="l">{{ l }}</option>
+                  <option v-for="l in locations" :key="l.value" :value="l.value">{{ l.label }}</option>
                 </select>
                 <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" :size="18" />
               </div>
@@ -142,13 +123,13 @@ const formatSalary = (job) => job.salary
 
         <!-- RÉSULTATS -->
         <!-- Loading -->
-        <div v-if="loading" class="flex justify-center items-center py-24">
+        <div v-if="jobsLoading" class="flex justify-center items-center py-24">
           <Loader2 :size="36" class="animate-spin text-blue-500" />
         </div>
 
         <!-- Error -->
-        <div v-else-if="fetchError" class="text-center py-16 bg-white rounded-2xl border border-dashed border-red-200">
-          <p class="text-red-500 font-semibold">{{ fetchError }}</p>
+        <div v-else-if="jobsError" class="text-center py-16 bg-white rounded-2xl border border-dashed border-red-200">
+          <p class="text-red-500 font-semibold">{{ jobsError }}</p>
           <button @click="loadJobs" class="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition">Réessayer</button>
         </div>
 

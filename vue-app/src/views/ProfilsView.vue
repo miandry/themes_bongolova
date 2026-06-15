@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import {
   Search, MapPin, Users2, CheckCircle2, ArrowUpRight,
   Heart, LayoutGrid, List, Sparkles, Clock,
@@ -9,30 +10,26 @@ import { RouterLink } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
-import { apiGet } from '@/composables/api'
+import { useUserStore } from '@/stores/user/user.store'
+import { useTaxonomyStore } from '@/stores/taxonomy/taxonomy.store'
 import { asList, personInitials } from '@/utils/apiData'
 
-// --- Filtres et états ---
+const userStore = useUserStore()
+const taxonomyStore = useTaxonomyStore()
+const { candidates, candidatesLoading, savedProfileIds } = storeToRefs(userStore)
+const { locations } = storeToRefs(taxonomyStore)
+
 const searchQuery = ref('')
 const selectedLocation = ref('all')
 const viewMode = ref('grid')
-const savedProfiles = ref([])
-
-const locations = ['Tsiroanomandidy', 'Maintirano', 'Bongolava', 'Télé-travail']
-
-const candidates = ref([])
-const apiLoading = ref(false)
 
 async function loadCandidates() {
-  apiLoading.value = true
   try {
-    const params = new URLSearchParams()
-    if (searchQuery.value) params.set('keyword', searchQuery.value)
-    if (selectedLocation.value && selectedLocation.value !== 'all') params.set('location', selectedLocation.value)
-    const data = await apiGet('bongolava_job/candidates?' + params.toString())
-    candidates.value = Array.isArray(data) ? data : ((data as { data?: unknown[] }).data ?? [])
-  } catch { candidates.value = [] }
-  finally { apiLoading.value = false }
+    await userStore.searchCandidates({
+      keyword: searchQuery.value || undefined,
+      location: selectedLocation.value !== 'all' ? selectedLocation.value : undefined,
+    })
+  } catch { /* handled in store */ }
 }
 
 onMounted(() => loadCandidates())
@@ -43,11 +40,7 @@ const getInitials = (c: { first_name?: string; last_name?: string }) =>
 
 const skillPreview = (c: { skills?: unknown }) => asList(c.skills).slice(0, 3)
 
-// --- Favoris ---
-const toggleSave = (id) => {
-  const i = savedProfiles.value.indexOf(id)
-  i > -1 ? savedProfiles.value.splice(i, 1) : savedProfiles.value.push(id)
-}
+const toggleSave = (id: number) => userStore.toggleSavedProfile(id)
 </script>
 
 <template>
@@ -76,7 +69,7 @@ const toggleSave = (id) => {
               <MapPin class="text-green-500 mr-3 shrink-0" :size="20" />
               <select v-model="selectedLocation" class="bg-transparent outline-none text-gray-800">
                 <option value="all">Toutes les villes</option>
-                <option v-for="l in locations" :key="l" :value="l">{{ l }}</option>
+                <option v-for="l in locations" :key="l.value" :value="l.value">{{ l.label }}</option>
               </select>
             </div>
           </div>
@@ -96,7 +89,7 @@ const toggleSave = (id) => {
       </div>
 
       <!-- Skeletons -->
-      <div v-if="apiLoading" :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6' : 'space-y-4'">
+      <div v-if="candidatesLoading" :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6' : 'space-y-4'">
         <SkeletonCard v-for="n in 8" :key="n" :avatar="true" :lines="2" />
       </div>
 
@@ -118,7 +111,7 @@ const toggleSave = (id) => {
               </div>
             </div>
             <button @click="toggleSave(c.id)" class="absolute top-3 right-3 p-1.5 rounded-full hover:bg-red-50 transition">
-              <Heart :size="16" :class="savedProfiles.includes(c.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'" />
+              <Heart :size="16" :class="savedProfileIds.includes(c.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'" />
             </button>
             <h3 class="text-lg font-bold text-gray-900">{{ c.first_name }} {{ c.last_name }}</h3>
             <p class="text-blue-600 text-sm font-medium mb-2">{{ c.job_target }}</p>
@@ -148,7 +141,7 @@ const toggleSave = (id) => {
             </div>
             <div class="flex items-center gap-2">
               <button @click="toggleSave(c.id)" class="p-2 rounded-full hover:bg-red-50 transition">
-                <Heart :size="16" :class="savedProfiles.includes(c.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'" />
+                <Heart :size="16" :class="savedProfileIds.includes(c.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'" />
               </button>
               <RouterLink :to="`/profils/${c.id}`" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg text-xs font-bold hover:shadow-md transition">
                 Voir le profil

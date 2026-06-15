@@ -2,9 +2,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Sparkles, User, Building2, CircleCheck, Loader2 } from 'lucide-vue-next'
-import { apiFetch, loginWithToken } from '@/composables/useAuth'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/auth/auth.store'
 
 const router  = useRouter()
+const auth = useAuthStore()
+const { loading } = storeToRefs(auth)
 const goBack  = () => router.back()
 
 const role         = ref('candidat')   // 'candidat' | 'recruteur'
@@ -17,17 +20,7 @@ const confirm      = ref('')
 const showPwd      = ref(false)
 const showCfm      = ref(false)
 const accepted     = ref(false)
-const loading      = ref(false)
 const error        = ref('')
-
-function formatApiErrors(json: { errors?: Record<string, string[]>; message?: string }): string {
-  const errs = json.errors
-  if (errs && typeof errs === 'object') {
-    const lines = Object.values(errs).flat().filter(Boolean)
-    if (lines.length) return lines.join(' ')
-  }
-  return json.message ?? "Erreur lors de l'inscription."
-}
 
 async function onSubmit() {
   error.value = ''
@@ -55,55 +48,34 @@ async function onSubmit() {
     error.value = 'Veuillez accepter les conditions générales.'
     return
   }
-  loading.value = true
   try {
-    const endpoint = role.value === 'recruteur'
-      ? 'bongolava_job/register/recruiter'
-      : 'bongolava_job/register/candidate'
-
-    const body = role.value === 'recruteur'
-      ? {
+    const result = role.value === 'recruteur'
+      ? await auth.registerRecruiter({
           email: email.value.trim(),
           password: password.value,
           organization: organization.value.trim(),
           phone: '',
-        }
-      : {
+        })
+      : await auth.registerCandidate({
           email: email.value.trim(),
           password: password.value,
           first_name: firstName.value.trim(),
           last_name: lastName.value.trim(),
           phone: '',
-        }
+        })
 
-    const r = await apiFetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    const json = await r.json().catch(() => ({}))
-    if (!r.ok) {
-      error.value = formatApiErrors(json as { errors?: Record<string, string[]>; message?: string })
+    if (!result.ok) {
+      error.value = result.message ?? "Erreur lors de l'inscription."
       return
     }
-    const j = json as { token?: string; user?: { id?: number; name?: string; email?: string; phone?: string }; role?: string }
-    if (j.token) {
-      loginWithToken(j.token, {
-        id: j.user?.id ?? 0,
-        name: j.user?.name ?? '',
-        email: j.user?.email ?? email.value.trim(),
-        role: (j.role as 'candidate' | 'recruiter' | 'admin') ?? (role.value === 'recruteur' ? 'recruiter' : 'candidate'),
-        phone: j.user?.phone ?? null,
-      })
-      await router.push('/')
+
+    if (auth.currentUser) {
+      await router.push('/mon-profil')
     } else {
-      // No token in response — redirect to login
       await router.push('/login')
     }
   } catch {
     error.value = 'Erreur de connexion. Veuillez réessayer.'
-  } finally {
-    loading.value = false
   }
 }
 </script>

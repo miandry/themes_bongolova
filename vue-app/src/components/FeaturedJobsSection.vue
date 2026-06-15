@@ -1,20 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { RouterLink } from 'vue-router'
-import { MapPin, Briefcase, Heart, Zap, ArrowRight, Calendar, Building2, Search } from 'lucide-vue-next'
-import { apiGet } from '@/composables/api'
+import { MapPin, Briefcase, Heart, Zap, ArrowRight, Building2 } from 'lucide-vue-next'
+import { useNodeStore } from '@/stores/node/node.store'
 
-const jobs = ref([])
-onMounted(async () => {
-  try {
-    const data = await apiGet('bongolava_job/jobs?per_page=4')
-    jobs.value = Array.isArray(data) ? data.slice(0, 4) : ((data as { data?: unknown[] }).data ?? []).slice(0, 4)
-  } catch { jobs.value = [] }
+const nodeStore = useNodeStore()
+const { featuredJobs } = storeToRefs(nodeStore)
+
+onMounted(() => {
+  nodeStore.fetchFeaturedJobs().catch(() => {})
 })
 
-const formatSalary = (job) => job.salary
-
-const savedJobs = ref([])
+const formatSalary = (job: { salary?: string }) => job.salary
 </script>
 
 <template>
@@ -34,7 +32,7 @@ const savedJobs = ref([])
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        <div v-for="job in jobs" :key="job.id" class="group relative bg-white/70 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+        <div v-for="job in featuredJobs" :key="job.id" class="group relative bg-white/70 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
           <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"></div>
           <div class="p-5">
             <div class="flex justify-between items-start mb-3">
@@ -44,7 +42,7 @@ const savedJobs = ref([])
                 <span v-if="job.is_remote ?? job.remote" class="px-2 py-0.5 bg-gradient-to-r from-green-100 to-green-200 rounded-md text-[10px] font-bold text-green-700">🌍 Remote</span>
               </div>
               <button class="p-1.5 rounded-full hover:bg-red-50 transition-all duration-200">
-                <Heart :size="16" :class="savedJobs.includes(job.id) ? 'fill-red-500 text-red-500' : 'text-gray-300 hover:text-red-400'" />
+                <Heart :size="16" class="text-gray-300 hover:text-red-400" />
               </button>
             </div>
             <h3 class="text-lg font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition line-clamp-2">{{ job.title }}</h3>

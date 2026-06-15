@@ -1,5 +1,6 @@
 <script setup>
-import { canAccessProfils } from '@/composables/useAuth'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/auth/auth.store'
 import Header from '../components/Header.vue'
 import HeroSection from '../components/HeroSection.vue'
 import CategoriesSection from '../components/CategoriesSection.vue'
@@ -7,6 +8,8 @@ import FeaturedJobsSection from '../components/FeaturedJobsSection.vue'
 import EventsSection from '../components/EventsSection.vue'
 import TalentsSection from '../components/TalentsSection.vue'
 import Footer from '../components/Footer.vue'
+
+const { canAccessProfils } = storeToRefs(useAuthStore())
 </script>
 
 <template>

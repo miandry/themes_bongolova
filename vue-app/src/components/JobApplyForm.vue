@@ -5,8 +5,13 @@ import {
   Send, CheckCircle2, Loader2, FileText,
   User, Mail, Phone, AlertCircle, LogIn,
 } from 'lucide-vue-next'
-import { isLoggedIn, currentUser, authRole } from '@/composables/useAuth'
-import { apiPostForm } from '@/composables/api'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/auth/auth.store'
+import { useNodeStore } from '@/stores/node/node.store'
+
+const auth = useAuthStore()
+const nodeStore = useNodeStore()
+const { isLoggedIn, currentUser, authRole } = storeToRefs(auth)
 
 const props = defineProps<{
   jobId: string | number
@@ -100,7 +105,7 @@ async function submit() {
   }
 
   try {
-    await apiPostForm(`bongolava_job/jobs/${props.jobId}/apply`, fd)
+    await nodeStore.applyToJob(props.jobId, fd)
     applySuccess.value = true
     emit('success')
   } catch (e) {

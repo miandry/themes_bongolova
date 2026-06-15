@@ -7,7 +7,11 @@ import {
 } from 'lucide-vue-next'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
-import { apiPost } from '@/composables/api'
+import { useNodeStore } from '@/stores/node/node.store'
+import { storeToRefs } from 'pinia'
+
+const nodeStore = useNodeStore()
+const { contactLoading, contactSuccess, contactError } = storeToRefs(nodeStore)
 
 // --- État du formulaire ---
 const form = ref({
@@ -17,33 +21,25 @@ const form = ref({
   message: ''
 })
 
-const isSubmitted = ref(false)
-const isLoading = ref(false)
-
 // --- Soumission du formulaire ---
-const handleSubmit = async (e) => {
+const handleSubmit = async (e: Event) => {
   e.preventDefault()
   if (!form.value.name || !form.value.email || !form.value.message) {
     alert('Veuillez remplir tous les champs obligatoires')
     return
   }
-  isLoading.value = true
   try {
-    await apiPost('bongolava_job/contact', {
+    await nodeStore.submitContact({
       name: form.value.name,
       email: form.value.email,
       subject: form.value.subject,
       message: form.value.message,
     })
-    isSubmitted.value = true
     setTimeout(() => {
-      isSubmitted.value = false
       form.value = { name: '', email: '', subject: '', message: '' }
     }, 4000)
   } catch {
-    alert("Erreur lors de l'envoi. Veuillez réessayer.")
-  } finally {
-    isLoading.value = false
+    alert(contactError.value ?? "Erreur lors de l'envoi. Veuillez réessayer.")
   }
 }
 </script>
@@ -136,16 +132,16 @@ const handleSubmit = async (e) => {
               <!-- Bouton d'envoi -->
               <button 
                 type="submit"
-                :disabled="isLoading"
+                :disabled="contactLoading"
                 class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Loader2 v-if="isLoading" :size="18" class="animate-spin" />
+                <Loader2 v-if="contactLoading" :size="18" class="animate-spin" />
                 <Send v-else :size="18" />
-                <span>{{ isLoading ? 'Envoi...' : 'Envoyer le message' }}</span>
+                <span>{{ contactLoading ? 'Envoi...' : 'Envoyer le message' }}</span>
               </button>
 
               <!-- Message de succès -->
-              <div v-if="isSubmitted" class="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3 text-green-700 text-sm">
+              <div v-if="contactSuccess" class="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3 text-green-700 text-sm">
                 <CheckCircle2 :size="18" class="shrink-0" />
                 Votre message a été envoyé avec succès. Nous vous répondrons rapidement.
               </div>

@@ -7,7 +7,11 @@ import {
   ChevronDown, Moon, Sun, LogOut, UserCircle2,
 } from 'lucide-vue-next'
 import { themeAsset } from '@/composables/themeAsset'
-import { isLoggedIn, currentUser, authRole, canAccessProfils, logout } from '@/composables/useAuth'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/auth/auth.store'
+
+const auth = useAuthStore()
+const { isLoggedIn, currentUser, authRole, canAccessProfils } = storeToRefs(auth)
 
 const router = useRouter()
 
@@ -46,7 +50,7 @@ const roleLabel = () => {
 async function handleLogout() {
   userMenuOpen.value = false
   isOpen.value = false
-  await logout()
+  await auth.logout()
   router.push('/')
 }
 </script>

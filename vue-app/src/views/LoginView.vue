@@ -2,15 +2,17 @@
 import { ref } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Sparkles, Loader2 } from 'lucide-vue-next'
-import { login } from '@/composables/useAuth'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/auth/auth.store'
 
 const router = useRouter()
 const route  = useRoute()
+const auth = useAuthStore()
+const { loading } = storeToRefs(auth)
 
 const email    = ref('')
 const password = ref('')
 const showPwd  = ref(false)
-const loading  = ref(false)
 const error    = ref('')
 
 const goBack = () => router.back()
@@ -21,9 +23,8 @@ async function onSubmit() {
     error.value = 'Veuillez remplir tous les champs.'
     return
   }
-  loading.value = true
   try {
-    const result = await login(email.value.trim(), password.value)
+    const result = await auth.login(email.value.trim(), password.value)
     if (!result.ok) {
       error.value = result.message
       return
@@ -33,8 +34,6 @@ async function onSubmit() {
     await router.push(redirect)
   } catch {
     error.value = 'Erreur réseau. Veuillez réessayer.'
-  } finally {
-    loading.value = false
   }
 }
 </script>

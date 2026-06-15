@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import {
   ArrowLeft, MapPin, Briefcase,
   Phone, Mail, Heart, Share2, Award,
@@ -9,7 +10,7 @@ import {
 } from 'lucide-vue-next'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
-import { apiGet } from '@/composables/api'
+import { useUserStore } from '@/stores/user/user.store'
 import {
   asList,
   asEducationList,
@@ -21,9 +22,8 @@ const route = useRoute()
 const router = useRouter()
 const candidateId = route.params.id as string
 
-const candidate = ref<Record<string, unknown> | null>(null)
-const loading = ref(true)
-const error = ref('')
+const userStore = useUserStore()
+const { candidate, candidateLoading, candidateError } = storeToRefs(userStore)
 
 const certifications = computed(() => asList(candidate.value?.certifications))
 const languages = computed(() => asList(candidate.value?.languages))
@@ -46,40 +46,29 @@ const initials = computed(() =>
 )
 
 async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    const data = await apiGet<Record<string, unknown>>(`bongolava_job/candidates/${candidateId}`)
-    if (!data || typeof data !== 'object' || !data.id) {
-      error.value = 'Profil introuvable.'
-      candidate.value = null
-    } else {
-      candidate.value = data
-    }
-  } catch {
-    error.value = 'Profil introuvable.'
-    candidate.value = null
-  } finally {
-    loading.value = false
-  }
+  await userStore.fetchCandidateById(candidateId)
 }
 
 onMounted(load)
 
 const goBack = () => router.back()
-const isSaved = ref(false)
-const toggleSave = () => { isSaved.value = !isSaved.value }
+const toggleSave = () => {
+  if (candidate.value?.id) userStore.toggleSavedProfile(Number(candidate.value.id))
+}
+const isSaved = computed(() =>
+  candidate.value?.id ? userStore.isProfileSaved(Number(candidate.value.id)) : false,
+)
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-50 pb-32">
     <Header />
 
-    <div v-if="loading" class="flex justify-center items-center py-32 pt-40">
+    <div v-if="candidateLoading" class="flex justify-center items-center py-32 pt-40">
       <Loader2 :size="36" class="animate-spin text-purple-500" />
     </div>
-    <div v-else-if="error" class="text-center py-24 pt-32">
-      <p class="text-red-500 font-semibold text-lg">{{ error }}</p>
+    <div v-else-if="candidateError" class="text-center py-24 pt-32">
+      <p class="text-red-500 font-semibold text-lg">{{ candidateError }}</p>
       <button @click="load" class="mt-4 px-5 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">Réessayer</button>
     </div>
     <template v-else-if="candidate">

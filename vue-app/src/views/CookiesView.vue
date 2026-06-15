@@ -120,10 +120,10 @@ const savePreferences = () => {
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                   <tr>
-                    <td class="px-4 py-2">auth_session</td>
+                    <td class="px-4 py-2">bongolava_auth</td>
                     <td class="px-4 py-2 text-green-600">Essentiel</td>
-                    <td class="px-4 py-2">24h</td>
-                    <td class="px-4 py-2 text-gray-500">Maintient la session utilisateur</td>
+                    <td class="px-4 py-2">30 jours</td>
+                    <td class="px-4 py-2 text-gray-500">Session d'authentification sécurisée (httpOnly, Secure, SameSite Strict)</td>
                   </tr>
                   <tr>
                     <td class="px-4 py-2">analytics_id</td>

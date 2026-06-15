@@ -2,12 +2,14 @@ import path from 'node:path';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
+/**
+ * Drupal serves index.js from …/themes/bongolava/dist/assets/index.js.
+ * base: './' keeps lazy chunks as ./JobsView.js (resolved next to index.js).
+ * modulePreload: false avoids Vite injecting href="/assets/…" preloads (404 on /jobs).
+ */
 export default defineConfig({
     base: './',
-    plugins: [
-        vue(),
-        tailwindcss(),
-    ],
+    plugins: [vue(), tailwindcss()],
     resolve: {
         alias: {
             '@': path.resolve(__dirname, 'src'),

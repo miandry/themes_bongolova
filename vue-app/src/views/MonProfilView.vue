@@ -1,149 +1,134 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import {
   User, Mail, Phone, MapPin, Briefcase, Globe, Github,
   Linkedin, Edit3, Save, X, Upload, FileText, Trash2,
   Building2, CheckCircle2, Award, BookOpen, Languages,
   Camera, Link2, LogOut, ChevronRight, Loader2,
+  Eye, EyeOff, Circle,
 } from 'lucide-vue-next'
 import Header from '@/components/Header.vue'
 import Footer from '@/components/Footer.vue'
-import { isLoggedIn, currentUser, authRole, logout } from '@/composables/useAuth'
-import { apiGet, apiPost, apiPostForm, apiPut } from '@/composables/api'
+import { useAuthStore } from '@/stores/auth/auth.store'
+import { useUserStore } from '@/stores/user/user.store'
 
 const router = useRouter()
+const auth = useAuthStore()
+const userStore = useUserStore()
 
-// ── Redirect if not logged in ─────────────────────────────────────────────────
-if (!isLoggedIn.value) { router.replace('/login') }
+const { currentUser, authRole } = storeToRefs(auth)
+const {
+  profile,
+  profileLoading,
+  profileSaving,
+  profileError,
+  profileSuccess,
+  applications,
+  applicationsLoading,
+  photoLoading,
+  cvLoading,
+  cvDeleting,
+  logoLoading,
+} = storeToRefs(userStore)
 
-// ── State ─────────────────────────────────────────────────────────────────────
-const loading  = ref(true)
-const saving   = ref(false)
-const error    = ref('')
-const saveMsg  = ref('')
-const editing  = ref(false)
-
-const profile  = ref<Record<string, unknown> | null>(null)
-
-// ── Edit form ─────────────────────────────────────────────────────────────────
-const form = ref<Record<string, unknown>>({})
+const editing = ref(false)
+const saveMsg = ref('')
+const availabilityUpdating = ref(false)
+const form = ref<Record<string, string>>({})
 
 function startEdit() {
-  form.value = { ...profile.value }
+  const p = profile.value ?? {}
+  form.value = Object.fromEntries(
+    Object.entries(p).map(([k, v]) => [k, v == null ? '' : String(v)]),
+  )
   editing.value = true
   saveMsg.value = ''
 }
 function cancelEdit() { editing.value = false; form.value = {} }
 
-// ── Load profile ──────────────────────────────────────────────────────────────
 async function loadProfile() {
-  loading.value = true
-  error.value   = ''
-  try {
-    const path = authRole.value === 'recruiter'
-      ? 'bongolava_job/my-recruiter-profile'
-      : 'bongolava_job/my-candidate-profile'
-    profile.value = await apiGet<Record<string, unknown>>(path)
-  } catch (e) {
-    error.value = (e instanceof Error ? e.message : 'Profil introuvable.') +
-      ' — Complétez votre profil via le formulaire ci-dessous.'
-    profile.value = {}
-  } finally {
-    loading.value = false
-  }
+  await userStore.fetchMyProfile()
 }
 
-// ── Save profile ──────────────────────────────────────────────────────────────
 async function saveProfile() {
-  saving.value  = true
   saveMsg.value = ''
-  error.value   = ''
   try {
-    const path = authRole.value === 'recruiter'
-      ? 'bongolava_job/my-recruiter-profile'
-      : 'bongolava_job/my-candidate-profile'
-    profile.value = await apiPut<Record<string, unknown>>(path, form.value)
+    await userStore.updateMyProfile(form.value)
     editing.value = false
     saveMsg.value = 'Profil mis à jour avec succès !'
     setTimeout(() => { saveMsg.value = '' }, 3000)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur lors de la sauvegarde.'
+  } catch { /* error in store */ }
+}
+
+// Ajoutez cette fonction dans la section des méthodes
+async function toggleAvailability() {
+  if (!profile.value) return
+  
+  availabilityUpdating.value = true
+  try {
+    const newAvailability = !profile.value.available
+    await userStore.updateMyProfile({ available: newAvailability })
+    // Recharge le profil pour avoir les données à jour
+    await loadProfile()
+    
+    // Message de confirmation optionnel
+    saveMsg.value = newAvailability 
+      ? 'Profil publié avec succès !' 
+      : 'Profil dépublié avec succès !'
+    setTimeout(() => { saveMsg.value = '' }, 3000)
+  } catch (error) {
+    console.error('Erreur lors du changement de statut:', error)
   } finally {
-    saving.value = false
+    availabilityUpdating.value = false
   }
 }
 
-// ── Photo upload (candidate) ──────────────────────────────────────────────────
 const photoInput = ref<HTMLInputElement | null>(null)
-const photoLoading = ref(false)
 
 async function onPhotoChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
-  photoLoading.value = true
   try {
-    const fd = new FormData(); fd.append('photo', file)
-    const res = await apiPostForm<{ photo_path: string }>('bongolava_job/candidate/upload-photo', fd)
-    if (profile.value) profile.value = { ...profile.value, photo_path: res.photo_path }
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Erreur upload photo.' }
-  finally { photoLoading.value = false }
+    await userStore.uploadPhoto(file)
+  } catch { /* error in store */ }
 }
 
-// ── CV upload / delete (candidate) ───────────────────────────────────────────
 const cvInput = ref<HTMLInputElement | null>(null)
-const cvLoading  = ref(false)
-const cvDeleting = ref(false)
+
+const cvFullUrl = computed(() => {
+  if (!profile.value?.cv_path) return null
+  return `http://bongolava.local/sites/default/files/bongolava_job/${profile.value.cv_path}`
+})
 
 async function onCvChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
-  cvLoading.value = true
   try {
-    const fd = new FormData(); fd.append('cv', file)
-    const res = await apiPostForm<{ cv_path: string }>('bongolava_job/candidate/upload-cv', fd)
-    if (profile.value) profile.value = { ...profile.value, cv_path: res.cv_path }
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Erreur upload CV.' }
-  finally { cvLoading.value = false }
+    await userStore.uploadCv(file)
+  } catch { /* error in store */ }
 }
 
 async function deleteCV() {
   if (!confirm('Supprimer le CV ?')) return
-  cvDeleting.value = true
   try {
-    await apiPost('bongolava_job/candidate/delete-cv', {})
-    if (profile.value) profile.value = { ...profile.value, cv_path: null }
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Erreur suppression CV.' }
-  finally { cvDeleting.value = false }
+    await userStore.deleteCv()
+  } catch { /* error in store */ }
 }
 
-// ── Logo upload (recruiter) ───────────────────────────────────────────────────
 const logoInput = ref<HTMLInputElement | null>(null)
-const logoLoading = ref(false)
 
 async function onLogoChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
-  logoLoading.value = true
   try {
-    const fd = new FormData(); fd.append('logo', file)
-    const res = await apiPostForm<{ logo_path: string }>('bongolava_job/recruiter/upload-logo', fd)
-    if (profile.value) profile.value = { ...profile.value, logo_path: res.logo_path }
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Erreur upload logo.' }
-  finally { logoLoading.value = false }
+    await userStore.uploadLogo(file)
+  } catch { /* error in store */ }
 }
 
-// ── Applications (candidate) ──────────────────────────────────────────────────
-const applications = ref<Record<string, unknown>[]>([])
-const appsLoading  = ref(false)
-
 async function loadApplications() {
-  if (authRole.value !== 'candidate') return
-  appsLoading.value = true
-  try {
-    applications.value = await apiGet<Record<string, unknown>[]>('bongolava_job/candidate/applications')
-  } catch { applications.value = [] }
-  finally { appsLoading.value = false }
+  await userStore.fetchMyApplications()
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -185,7 +170,8 @@ function skillsArray(skills: unknown): string[] {
 }
 
 async function handleLogout() {
-  await logout()
+  await auth.logout()
+  userStore.clearProfileState()
   router.push('/')
 }
 
@@ -200,7 +186,7 @@ onMounted(() => { loadProfile(); loadApplications() })
       <div class="max-w-5xl mx-auto px-4 sm:px-6">
 
         <!-- Loading -->
-        <div v-if="loading" class="flex justify-center items-center py-32">
+        <div v-if="profileLoading" class="flex justify-center items-center py-32">
           <Loader2 :size="32" class="animate-spin text-green-500" />
         </div>
 
@@ -238,6 +224,26 @@ onMounted(() => { loadProfile(); loadApplications() })
 
                 <!-- Actions -->
                 <div class="flex items-center gap-2 sm:mb-1">
+                  <!-- Bouton Publier/Dépublier (visible seulement quand on n'est pas en mode édition) -->
+                  <button
+                    v-if="!editing && authRole === 'candidate'"
+                    type="button"
+                    :disabled="availabilityUpdating"
+                    :class="[
+                      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition',
+                      profile?.available 
+                        ? 'bg-amber-500 text-white hover:bg-amber-600' 
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    ]"
+                    @click="toggleAvailability"
+                  >
+                    <Loader2 v-if="availabilityUpdating" :size="14" class="animate-spin" />
+                    <EyeOff v-else-if="profile?.available" :size="14" />
+                    <Eye v-else :size="14" />
+                    {{ profile?.available ? 'Dépublier' : 'Publier' }}
+                  </button>
+
+                  <!-- Bouton Modifier -->
                   <button
                     v-if="!editing"
                     type="button"
@@ -246,14 +252,16 @@ onMounted(() => { loadProfile(); loadApplications() })
                   >
                     <Edit3 :size="14" /> Modifier
                   </button>
+                  
+                  <!-- Boutons Enregistrer/Annuler en mode édition -->
                   <template v-else>
                     <button
                       type="button"
-                      :disabled="saving"
+                      :disabled="profileSaving"
                       class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition disabled:opacity-60"
                       @click="saveProfile"
                     >
-                      <Loader2 v-if="saving" :size="14" class="animate-spin" />
+                      <Loader2 v-if="profileSaving" :size="14" class="animate-spin" />
                       <Save v-else :size="14" />
                       Enregistrer
                     </button>
@@ -261,6 +269,8 @@ onMounted(() => { loadProfile(); loadApplications() })
                       <X :size="14" /> Annuler
                     </button>
                   </template>
+                  
+                  <!-- Bouton Déconnexion -->
                   <button type="button" class="flex items-center gap-2 px-3 py-2 border border-red-200 text-red-500 rounded-xl text-sm font-semibold hover:bg-red-50 transition" @click="handleLogout">
                     <LogOut :size="14" />
                   </button>
@@ -270,8 +280,24 @@ onMounted(() => { loadProfile(); loadApplications() })
               <!-- Name & role -->
               <div class="flex flex-wrap items-center gap-3">
                 <div>
-                  <h1 class="text-2xl font-black text-gray-900">
+                  <h1 class="text-2xl font-black text-gray-900 flex items-center gap-2">
                     {{ authRole === 'recruiter' ? String(profile?.organization ?? currentUser?.name) : `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || currentUser?.name }}
+                    
+                    <!-- Point indicateur de statut pour les candidats -->
+                    <span v-if="authRole === 'candidate'" class="relative flex h-3 w-3">
+                      <span 
+                        :class="[
+                          'absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping',
+                          profile?.available ? 'bg-green-400' : 'bg-red-400'
+                        ]"
+                      ></span>
+                      <span 
+                        :class="[
+                          'relative inline-flex rounded-full h-3 w-3',
+                          profile?.available ? 'bg-green-500' : 'bg-red-500'
+                        ]"
+                      ></span>
+                    </span>
                   </h1>
                   <p class="text-gray-500 text-sm mt-0.5">{{ currentUser?.email }}</p>
                 </div>
@@ -283,11 +309,12 @@ onMounted(() => { loadProfile(); loadApplications() })
                 </span>
               </div>
 
+
               <!-- Success / error banners -->
               <div v-if="saveMsg" class="mt-3 px-4 py-2 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-center gap-2">
                 <CheckCircle2 :size="14" /> {{ saveMsg }}
               </div>
-              <div v-if="error" class="mt-3 px-4 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{{ error }}</div>
+              <div v-if="profileError" class="mt-3 px-4 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{{ profileError }}</div>
             </div>
           </div>
 
@@ -328,17 +355,17 @@ onMounted(() => { loadProfile(); loadApplications() })
                       </template>
                       <span v-else class="text-sm text-gray-700">{{ profile?.location ?? '—' }}</span>
                     </div>
-                    <!-- Portfolio -->
+                    <!-- website -->
                     <div class="flex items-center gap-3">
                       <Link2 :size="14" class="text-gray-400 flex-shrink-0" />
                       <template v-if="editing">
-                        <input v-model="form.portfolio" type="url" placeholder="https://…" class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
+                        <input v-model="form.website" type="url" placeholder="https://…" class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
                       </template>
-                      <a v-else-if="profile?.portfolio" :href="String(profile.portfolio)" target="_blank" class="text-sm text-blue-600 hover:underline truncate">{{ String(profile.portfolio) }}</a>
+                      <a v-else-if="profile?.website" :href="String(profile.website)" target="_blank" class="text-sm text-blue-600 hover:underline truncate">{{ String(profile.website) }}</a>
                       <span v-else class="text-sm text-gray-400">—</span>
                     </div>
                     <!-- LinkedIn -->
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 hidden">
                       <Linkedin :size="14" class="text-gray-400 flex-shrink-0" />
                       <template v-if="editing">
                         <input v-model="form.linkedin" type="url" placeholder="https://linkedin.com/in/…" class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
@@ -347,7 +374,7 @@ onMounted(() => { loadProfile(); loadApplications() })
                       <span v-else class="text-sm text-gray-400">—</span>
                     </div>
                     <!-- GitHub -->
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 hidden">
                       <Github :size="14" class="text-gray-400 flex-shrink-0" />
                       <template v-if="editing">
                         <input v-model="form.github" type="url" placeholder="https://github.com/…" class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
@@ -394,7 +421,14 @@ onMounted(() => { loadProfile(); loadApplications() })
                   </h2>
                   <div v-if="profile?.cv_path" class="flex items-center gap-3 mb-3">
                     <FileText :size="20" class="text-green-600 flex-shrink-0" />
-                    <span class="text-sm text-gray-700 truncate flex-1">CV uploadé</span>
+                    <a 
+                      :href="cvFullUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-sm text-green-600 hover:text-green-700 hover:underline truncate flex-1"
+                    >
+                      Voir mon CV
+                    </a>
                     <button type="button" :disabled="cvDeleting" class="text-red-400 hover:text-red-600 transition" @click="deleteCV">
                       <Loader2 v-if="cvDeleting" :size="14" class="animate-spin" />
                       <Trash2 v-else :size="14" />
@@ -445,8 +479,8 @@ onMounted(() => { loadProfile(); loadApplications() })
                     </label>
                     <label class="col-span-full flex flex-col gap-1">
                       <span class="text-xs font-semibold text-gray-500">Présentation</span>
-                      <textarea v-if="editing" v-model="form.experiences" rows="3" class="inp resize-none" placeholder="Décrivez votre parcours…" />
-                      <p v-else class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ profile?.experiences ?? '—' }}</p>
+                      <textarea v-if="editing" v-model="form.bio" rows="3" class="inp resize-none" placeholder="Décrivez votre parcours…" />
+                      <p v-else class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ profile?.bio ?? '—' }}</p>
                     </label>
                   </div>
                 </div>
@@ -479,7 +513,7 @@ onMounted(() => { loadProfile(); loadApplications() })
                   <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
                     <Briefcase :size="13" /> Mes candidatures
                   </h2>
-                  <div v-if="appsLoading" class="text-center py-6 text-gray-400">
+                  <div v-if="applicationsLoading" class="text-center py-6 text-gray-400">
                     <Loader2 :size="20" class="animate-spin mx-auto" />
                   </div>
                   <div v-else-if="!applications.length" class="text-sm text-gray-400 text-center py-6">

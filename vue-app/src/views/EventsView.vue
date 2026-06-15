@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import {
   Calendar, MapPin, Clock, ArrowRight,
   Search, Filter, Users2
@@ -8,37 +9,35 @@ import { RouterLink } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
-import { apiGet } from '@/composables/api'
+import { useNodeStore } from '@/stores/node/node.store'
+import { useTaxonomyStore } from '@/stores/taxonomy/taxonomy.store'
 
-// --- Filtres ---
+const nodeStore = useNodeStore()
+const taxonomyStore = useTaxonomyStore()
+const { events, eventsLoading } = storeToRefs(nodeStore)
+const { eventTypes } = storeToRefs(taxonomyStore)
+
 const searchQuery = ref('')
 const selectedType = ref('')
 
-const eventTypes = ['Salon', 'Atelier', 'Conférence', 'Formation']
-
-const events = ref([])
-const apiLoading = ref(false)
-
 async function loadEvents() {
-  apiLoading.value = true
   try {
-    const params = new URLSearchParams()
-    if (searchQuery.value) params.set('search', searchQuery.value)
-    if (selectedType.value) params.set('type', selectedType.value)
-    const data = await apiGet('bongolava_job/events?' + params.toString())
-    events.value = Array.isArray(data) ? data : []
-  } catch { events.value = [] }
-  finally { apiLoading.value = false }
+    await nodeStore.searchEvents({
+      search: searchQuery.value || undefined,
+      type: selectedType.value || undefined,
+    })
+  } catch { /* handled in store */ }
 }
 
 onMounted(loadEvents)
 watch([searchQuery, selectedType], loadEvents)
 
 // --- Utilitaires ---
-const parseEventDate = (event) => new Date(event.date + 'T' + (event.time ?? '00:00'))
-const parseEventEndDate = (event) => new Date((event.end_date ?? event.date) + 'T' + (event.end_time ?? event.time ?? '00:00'))
+const parseEventDate = (event: { date?: string; time?: string }) => new Date(String(event.date) + 'T' + (event.time ?? '00:00'))
+const parseEventEndDate = (event: { date?: string; end_date?: string; time?: string; end_time?: string }) =>
+  new Date(String(event.end_date ?? event.date) + 'T' + (event.end_time ?? event.time ?? '00:00'))
 
-const formatDate = (event) => {
+const formatDate = (event: { date?: string; time?: string }) => {
   return parseEventDate(event).toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'long',
@@ -46,18 +45,18 @@ const formatDate = (event) => {
   })
 }
 
-const formatTime = (dateObj) => {
+const formatTime = (dateObj: Date) => {
   if (dateObj instanceof Date) {
     return dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   }
   return ''
 }
 
-const getMonthShort = (event) => {
+const getMonthShort = (event: { date?: string; time?: string }) => {
   return parseEventDate(event).toLocaleString('fr', { month: 'short' }).toUpperCase()
 }
 
-const getDay = (event) => parseEventDate(event).getDate()
+const getDay = (event: { date?: string; time?: string }) => parseEventDate(event).getDate()
 </script>
 
 <template>
@@ -86,7 +85,7 @@ const getDay = (event) => parseEventDate(event).getDate()
             <div class="flex flex-wrap gap-2">
               <select v-model="selectedType" class="px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-500">
                 <option value="">Tous types</option>
-                <option v-for="type in eventTypes" :key="type" :value="type">{{ type }}</option>
+                <option v-for="type in eventTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
               </select>
             </div>
           </div>
@@ -94,7 +93,7 @@ const getDay = (event) => parseEventDate(event).getDate()
 
         <!-- Résultats -->
         <!-- Skeletons -->
-        <div v-if="apiLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div v-if="eventsLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <SkeletonCard v-for="n in 6" :key="n" :lines="3" />
         </div>
 

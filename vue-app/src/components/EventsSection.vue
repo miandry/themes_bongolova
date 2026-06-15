@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Calendar, MapPin, ArrowRight } from 'lucide-vue-next'
-import { apiGet } from '@/composables/api'
+import { useNodeStore } from '@/stores/node/node.store'
 
-const events = ref([])
-onMounted(async () => {
-  try {
-    const data = await apiGet('bongolava_job/events')
-    events.value = Array.isArray(data) ? data.slice(0, 3) : []
-  } catch { events.value = [] }
+const nodeStore = useNodeStore()
+const { upcomingEvents } = storeToRefs(nodeStore)
+
+const events = computed(() => upcomingEvents.value.slice(0, 3))
+
+onMounted(() => {
+  nodeStore.fetchEvents().catch(() => {})
 })
 
-const parseDate = (event) => new Date(event.date + 'T' + (event.time ?? '00:00'))
-const getMonth = (event) => parseDate(event).toLocaleString('fr', { month: 'short' })
-const getDay = (event) => parseDate(event).getDate()
+const parseDate = (event: { date?: string; time?: string }) => new Date(String(event.date) + 'T' + (event.time ?? '00:00'))
+const getMonth = (event: { date?: string; time?: string }) => parseDate(event).toLocaleString('fr', { month: 'short' })
+const getDay = (event: { date?: string; time?: string }) => parseDate(event).getDate()
 </script>
 
 <template>
