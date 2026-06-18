@@ -106,7 +106,7 @@ const cvFullUrl = computed(() => {
 
 const logoFullUrl = computed(() => {
   if (!profile.value?.logo_path) return null
-  return `/sites/default/files/bongolava_job/${profile.value.logo_path}`
+  return `/sites/bongolava/files/bongolava_job/${profile.value.logo_path}`
 })
 
 async function onCvChange(e: Event) {
