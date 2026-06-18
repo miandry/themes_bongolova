@@ -92,8 +92,31 @@ export function toQueryString(params: Record<string, string | number | undefined
   return qs ? `?${qs}` : ''
 }
 
+import type { PaginatedResponse } from '@/types/entities'
+
 /** Normalize list responses (array or { data: [] }). */
 export function normalizeList<T>(data: T[] | { data?: T[] }): T[] {
   if (Array.isArray(data)) return data
   return data?.data ?? []
+}
+
+/** Normalize paginated API responses. */
+export function normalizePaginatedList<T>(
+  data: T[] | PaginatedResponse<T>,
+): { items: T[]; meta: import('@/types/entities').PaginatedMeta | null } {
+  if (Array.isArray(data)) {
+    return { items: data, meta: null }
+  }
+  if (data && typeof data === 'object' && 'data' in data && Array.isArray(data.data)) {
+    return {
+      items: data.data,
+      meta: {
+        total: data.total ?? data.data.length,
+        current_page: data.current_page ?? 1,
+        last_page: data.last_page ?? 1,
+        per_page: data.per_page ?? data.data.length,
+      },
+    }
+  }
+  return { items: [], meta: null }
 }

@@ -6,6 +6,7 @@ import type {
   ContentType,
   JobSearchFilters,
   EventSearchFilters,
+  PaginatedResponse,
 } from '@/types/entities'
 import { API_ROUTES, CONTENT_TYPE_ROUTES } from '@/services/api-urls'
 import {
@@ -16,6 +17,7 @@ import {
   apiPostForm,
   toQueryString,
   normalizeList,
+  normalizePaginatedList,
 } from '@/services/api.service'
 
 const CACHE_TTL_MS = 60_000
@@ -35,6 +37,11 @@ export const useNodeStore = defineStore('node', () => {
   const jobError = ref<string | null>(null)
   const jobsSuccess = ref(false)
   const jobSuccess = ref(false)
+
+  const jobsTotal = ref(0)
+  const jobsCurrentPage = ref(1)
+  const jobsLastPage = ref(1)
+  const jobsPerPage = ref(12)
 
   // ── Events ────────────────────────────────────────────────────────────────
   const events = ref<Event[]>([])
@@ -92,9 +99,23 @@ export const useNodeStore = defineStore('node', () => {
         location: filters.location,
         sort: filters.sort,
         per_page: filters.per_page,
+        page: filters.page,
       })
-      const data = await apiGet<Job[] | { data?: Job[] }>(path)
-      jobs.value = normalizeList(data)
+      const data = await apiGet<Job[] | PaginatedResponse<Job>>(path)
+      const { items, meta } = normalizePaginatedList(data)
+      jobs.value = items
+      if (meta) {
+        jobsTotal.value = meta.total
+        jobsCurrentPage.value = meta.current_page
+        jobsLastPage.value = meta.last_page
+        jobsPerPage.value = meta.per_page
+      }
+      else {
+        jobsTotal.value = items.length
+        jobsCurrentPage.value = 1
+        jobsLastPage.value = 1
+        jobsPerPage.value = items.length
+      }
       listCache.set(key, { data: jobs.value, fetchedAt: Date.now() })
       jobsSuccess.value = true
       return jobs.value
@@ -419,6 +440,10 @@ export const useNodeStore = defineStore('node', () => {
     jobError,
     jobsSuccess,
     jobSuccess,
+    jobsTotal,
+    jobsCurrentPage,
+    jobsLastPage,
+    jobsPerPage,
     events,
     event,
     eventsLoading,

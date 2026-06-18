@@ -5,12 +5,13 @@ import { storeToRefs } from 'pinia'
 import {
   ArrowLeft, MapPin, Building2, Briefcase, Calendar,
   Heart, CheckCircle2, Zap, Share2,
-  Phone, Mail, Tag, Award
+  Phone, Mail, Tag, Award, Edit3, Trash2, Loader2
 } from 'lucide-vue-next'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import JobApplyForm from '../components/JobApplyForm.vue'
 import { useNodeStore } from '@/stores/node/node.store'
+import { useAuthStore } from '@/stores/auth/auth.store'
 import { asList } from '@/utils/apiData'
 
 const route = useRoute()
@@ -18,9 +19,13 @@ const router = useRouter()
 const jobId = route.params.id as string
 
 const nodeStore = useNodeStore()
+const auth = useAuthStore()
 const { job, jobLoading, jobError } = storeToRefs(nodeStore)
+const { currentUser, authRole } = storeToRefs(auth)
 
 const applySuccess = ref(false)
+const deleting = ref(false)
+
 /** API returns recruiter_id only — build a safe display object (avoids render crash). */
 const recruiter = computed(() => {
   const j = job.value
@@ -46,6 +51,14 @@ const requirements = computed(() => asList(job.value?.requirements))
 const responsibilities = computed(() => asList(job.value?.responsibilities))
 const tags = computed(() => asList(job.value?.tags))
 
+// Check if current user can edit or delete this job
+const canEdit = computed(() => {
+  if (!job.value || !currentUser.value) return false
+  if (authRole.value === 'admin') return true
+  if (authRole.value === 'recruiter' && job.value.recruiter_id === currentUser.value.id) return true
+  return false
+})
+
 async function load() {
   await nodeStore.fetchJobById(jobId)
 }
@@ -54,6 +67,25 @@ const goBack = () => router.back()
 const formatDate = (date?: string) => date
   ? new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
   : '—'
+
+async function editJob() {
+  router.push(`/jobs/${jobId}/edit`)
+}
+
+async function deleteJob() {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette offre d\'emploi ?')) return
+  
+  deleting.value = true
+  try {
+    await nodeStore.removeJob(jobId)
+    router.push('/jobs')
+  } catch (err) {
+    console.error('Error deleting job:', err)
+    alert('Erreur lors de la suppression.')
+  } finally {
+    deleting.value = false
+  }
+}
 
 onMounted(load)
 </script>
@@ -76,6 +108,13 @@ onMounted(load)
             <span class="text-sm font-medium">Retour</span>
           </button>
           <div class="flex gap-2">
+            <button v-if="canEdit" @click="editJob" class="p-2 rounded-full border border-blue-200 hover:bg-blue-50 transition" title="Éditer">
+              <Edit3 :size="18" class="text-blue-600" />
+            </button>
+            <button v-if="canEdit" @click="deleteJob" :disabled="deleting" class="p-2 rounded-full border border-red-200 hover:bg-red-50 transition disabled:opacity-50" title="Supprimer">
+              <Loader2 v-if="deleting" :size="18" class="text-red-600 animate-spin" />
+              <Trash2 v-else :size="18" class="text-red-600" />
+            </button>
             <button class="p-2 rounded-full border border-gray-200 hover:bg-gray-50 transition">
               <Heart :size="18" class="text-gray-400 hover:text-red-500" />
             </button>

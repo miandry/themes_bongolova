@@ -29,7 +29,17 @@ async function loadEvents() {
   } catch { /* handled in store */ }
 }
 
-onMounted(loadEvents)
+onMounted(async () => {
+  // Load taxonomies from API if not already cached
+  try {
+    await taxonomyStore.loadMultiple(['event_type', 'location'])
+  } catch (err) {
+    console.error('Error loading taxonomies:', err)
+  }
+  
+  // Load events
+  await loadEvents()
+})
 watch([searchQuery, selectedType], loadEvents)
 
 // --- Utilitaires ---

@@ -94,7 +94,7 @@ async function handleLogout() {
         </RouterLink>
 
         <!-- Search bar (when scrolled) -->
-        <div v-if="scrolled" class="hidden lg:flex flex-1 max-w-md">
+        <!-- <div v-if="scrolled" class="hidden lg:flex flex-1 max-w-md">
           <div class="relative w-full group">
             <Search :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-green-500 transition" />
             <input
@@ -103,7 +103,7 @@ async function handleLogout() {
               class="w-full pl-9 pr-3 py-1.5 bg-gray-100/80 backdrop-blur-sm border border-gray-200 rounded-full text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
             />
           </div>
-        </div>
+        </div> -->
 
         <!-- Desktop nav links -->
         <div class="hidden lg:flex items-center gap-1">

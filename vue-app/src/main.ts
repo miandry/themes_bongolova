@@ -7,6 +7,8 @@ import type { RouteRecordRaw } from 'vue-router'
 import HomeView from './views/HomeView.vue'
 import JobsView from './views/JobsView.vue'
 import JobDetailView from './views/JobDetailView.vue'
+import JobFormView from './views/JobFormView.vue'
+import MyJobsView from './views/MyJobsView.vue'
 import ProfilsView from './views/ProfilsView.vue'
 import ProfilDetailView from './views/ProfilDetailView.vue'
 import EventsView from './views/EventsView.vue'
@@ -20,6 +22,7 @@ import LoginView from './views/LoginView.vue'
 import RegisterView from './views/RegisterView.vue'
 import MonProfilView from './views/MonProfilView.vue'
 import { useAuthStore } from '@/stores/auth/auth.store'
+import { useTaxonomyStore } from '@/stores/taxonomy/taxonomy.store'
 
 declare global {
   interface Window {
@@ -42,6 +45,7 @@ declare module 'vue-router' {
   interface RouteMeta {
     requiresAuth?: boolean
     requiresProfils?: boolean
+    requiresRecruiter?: boolean
     guestOnly?: boolean
   }
 }
@@ -51,7 +55,10 @@ const routerBase = window.__BONGOLAVA_ROUTER_BASE ?? ''
 const routes: Array<RouteRecordRaw> = [
   { path: '/', component: HomeView },
   { path: '/jobs', component: JobsView },
+  { path: '/jobs/new', component: JobFormView, meta: { requiresAuth: true, requiresRecruiter: true } },
   { path: '/jobs/:id', component: JobDetailView },
+  { path: '/jobs/:id/edit', component: JobFormView, meta: { requiresAuth: true, requiresRecruiter: true } },
+  { path: '/my-jobs', component: MyJobsView, meta: { requiresAuth: true, requiresRecruiter: true } },
   { path: '/profils', component: ProfilsView, meta: { requiresAuth: true, requiresProfils: true } },
   { path: '/profils/:id', component: ProfilDetailView, meta: { requiresAuth: true, requiresProfils: true } },
   { path: '/evenements', component: EventsView },
@@ -79,6 +86,7 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
   const needsAuth = to.matched.some((record) => record.meta.requiresAuth)
   const needsProfils = to.matched.some((record) => record.meta.requiresProfils)
+  const needsRecruiter = to.matched.some((record) => record.meta.requiresRecruiter)
   const guestOnly = to.matched.some((record) => record.meta.guestOnly)
 
   if (needsAuth || guestOnly) {
@@ -90,6 +98,10 @@ router.beforeEach(async (to) => {
   }
 
   if (needsProfils && !auth.canAccessProfils) {
+    return { path: '/' }
+  }
+
+  if (needsRecruiter && (auth.authRole !== 'recruiter' && auth.authRole !== 'admin')) {
     return { path: '/' }
   }
 
@@ -113,7 +125,15 @@ app.use(router)
 
 async function bootstrap() {
   const auth = useAuthStore()
+  const taxonomy = useTaxonomyStore()
+  
   await auth.restoreSession()
+  
+  // Preload all taxonomies in the background (no need to await)
+  taxonomy.preloadAll().catch((err) => {
+    console.error('[bootstrap] Failed to preload taxonomies:', err)
+  })
+  
   app.mount('#bongolava-app')
 }
 

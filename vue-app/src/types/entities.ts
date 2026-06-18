@@ -90,11 +90,29 @@ export interface JobSearchFilters {
   location?: string
   sort?: string
   per_page?: number
+  page?: number
 }
 
 export interface CandidateSearchFilters {
   keyword?: string
   location?: string
+  per_page?: number
+  page?: number
+}
+
+export interface PaginatedMeta {
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
 }
 
 export interface EventSearchFilters {

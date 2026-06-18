@@ -1,39 +1,124 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
-  Search, MapPin, Users2, CheckCircle2, ArrowUpRight,
-  Heart, LayoutGrid, List, Sparkles, Clock,
-  Briefcase, Filter, ChevronDown, X
+  Search, MapPin, Users2,
+  Heart, LayoutGrid, List, Sparkles,
+  Briefcase, ArrowUpRight, ChevronDown
 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
+import Pagination from '@/components/Pagination.vue'
 import { useUserStore } from '@/stores/user/user.store'
 import { useTaxonomyStore } from '@/stores/taxonomy/taxonomy.store'
 import { asList, personInitials } from '@/utils/apiData'
 
+const PER_PAGE = 12
+
+const route = useRoute()
+const router = useRouter()
 const userStore = useUserStore()
 const taxonomyStore = useTaxonomyStore()
-const { candidates, candidatesLoading, savedProfileIds } = storeToRefs(userStore)
+const {
+  candidates,
+  candidatesLoading,
+  savedProfileIds,
+  candidatesTotal,
+  candidatesCurrentPage,
+  candidatesLastPage,
+} = storeToRefs(userStore)
 const { locations } = storeToRefs(taxonomyStore)
 
 const searchQuery = ref('')
-const selectedLocation = ref('all')
+const selectedLocation = ref('')
 const viewMode = ref('grid')
+const currentPage = ref(1)
+
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let syncingFromRoute = false
+let ignoreNextRouteWatch = false
+
+function readFiltersFromRoute() {
+  const q = route.query
+  searchQuery.value = typeof q.keyword === 'string' ? q.keyword : ''
+  selectedLocation.value = typeof q.location === 'string' ? q.location : ''
+  currentPage.value = Math.max(1, Number(q.page) || 1)
+}
+
+function buildRouteQuery() {
+  const query: Record<string, string> = {}
+  if (searchQuery.value.trim()) query.keyword = searchQuery.value.trim()
+  if (selectedLocation.value) query.location = selectedLocation.value
+  if (currentPage.value > 1) query.page = String(currentPage.value)
+  return query
+}
+
+function syncRoute() {
+  ignoreNextRouteWatch = true
+  router.replace({ path: '/profils', query: buildRouteQuery() })
+}
 
 async function loadCandidates() {
   try {
     await userStore.searchCandidates({
-      keyword: searchQuery.value || undefined,
-      location: selectedLocation.value !== 'all' ? selectedLocation.value : undefined,
+      keyword: searchQuery.value.trim() || undefined,
+      location: selectedLocation.value || undefined,
+      page: currentPage.value,
+      per_page: PER_PAGE,
     })
   } catch { /* handled in store */ }
 }
 
-onMounted(() => loadCandidates())
-watch([searchQuery, selectedLocation], () => loadCandidates())
+function applyFilters(resetPage = true) {
+  if (resetPage) currentPage.value = 1
+  syncRoute()
+  loadCandidates()
+}
+
+onMounted(async () => {
+  try {
+    await taxonomyStore.loadMultiple(['location'])
+  } catch (err) {
+    console.error('Error loading taxonomies:', err)
+  }
+  syncingFromRoute = true
+  readFiltersFromRoute()
+  syncingFromRoute = false
+  await loadCandidates()
+})
+
+watch([searchQuery, selectedLocation], () => {
+  if (syncingFromRoute) return
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => applyFilters(true), 350)
+})
+
+watch(() => route.query, () => {
+  if (ignoreNextRouteWatch) {
+    ignoreNextRouteWatch = false
+    return
+  }
+  syncingFromRoute = true
+  readFiltersFromRoute()
+  syncingFromRoute = false
+  loadCandidates()
+})
+
+function onPageChange(page: number) {
+  currentPage.value = page
+  syncRoute()
+  loadCandidates()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function resetFilters() {
+  searchQuery.value = ''
+  selectedLocation.value = ''
+  applyFilters(true)
+}
 
 const getInitials = (c: { first_name?: string; last_name?: string }) =>
   personInitials(c.first_name, c.last_name)
@@ -65,12 +150,13 @@ const toggleSave = (id: number) => userStore.toggleSavedProfile(id)
               <Search class="text-blue-600 mr-3 shrink-0" :size="20" />
               <input v-model="searchQuery" type="text" placeholder="Nom, métier ou compétence..." class="w-full bg-transparent outline-none text-gray-800" />
             </div>
-            <div class="flex items-center px-5 py-3 border-t sm:border-t-0 sm:border-l border-gray-100">
+            <div class="flex items-center px-5 py-3 border-t sm:border-t-0 sm:border-l border-gray-100 relative min-w-[180px]">
               <MapPin class="text-green-500 mr-3 shrink-0" :size="20" />
-              <select v-model="selectedLocation" class="bg-transparent outline-none text-gray-800">
-                <option value="all">Toutes les villes</option>
+              <select v-model="selectedLocation" class="bg-transparent outline-none text-gray-800 w-full appearance-none cursor-pointer pr-6">
+                <option value="">Toutes les villes</option>
                 <option v-for="l in locations" :key="l.value" :value="l.value">{{ l.label }}</option>
               </select>
+              <ChevronDown :size="16" class="absolute right-5 text-gray-400 pointer-events-none" />
             </div>
           </div>
         </div>
@@ -85,7 +171,7 @@ const toggleSave = (id: number) => userStore.toggleSavedProfile(id)
           <button @click="viewMode = 'grid'" :class="`p-2 rounded-lg transition ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'}`"><LayoutGrid :size="18" /></button>
           <button @click="viewMode = 'list'" :class="`p-2 rounded-lg transition ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'}`"><List :size="18" /></button>
         </div>
-        <p class="text-gray-500 text-sm">{{ candidates.length }} talent{{ candidates.length > 1 ? 's' : '' }} trouvé{{ candidates.length > 1 ? 's' : '' }}</p>
+        <p class="text-gray-500 text-sm">{{ candidatesTotal }} talent{{ candidatesTotal > 1 ? 's' : '' }} trouvé{{ candidatesTotal > 1 ? 's' : '' }}</p>
       </div>
 
       <!-- Skeletons -->
@@ -97,7 +183,7 @@ const toggleSave = (id: number) => userStore.toggleSavedProfile(id)
         <Users2 :size="40" class="text-gray-300 mx-auto mb-4" />
         <h3 class="text-xl font-bold text-gray-900 mb-1">Aucun talent trouvé</h3>
         <p class="text-gray-500">Modifiez vos critères de recherche.</p>
-        <button @click="searchQuery = ''; selectedLocation = 'all'" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm">Réinitialiser</button>
+        <button @click="resetFilters" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm">Réinitialiser</button>
       </div>
 
       <!-- Grille / Liste -->
@@ -150,6 +236,14 @@ const toggleSave = (id: number) => userStore.toggleSavedProfile(id)
           </div>
         </div>
       </div>
+
+      <Pagination
+        v-if="!candidatesLoading && candidates.length > 0"
+        :current-page="candidatesCurrentPage"
+        :last-page="candidatesLastPage"
+        :total="candidatesTotal"
+        @update:current-page="onPageChange"
+      />
     </main>
     <Footer />
   </div>

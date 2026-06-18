@@ -102,6 +102,13 @@ const cvFullUrl = computed(() => {
   return `/sites/bongolava/files/bongolava_job/${profile.value.cv_path}`
 })
 
+// const logoInput = ref<HTMLInputElement | null>(null)
+
+const logoFullUrl = computed(() => {
+  if (!profile.value?.logo_path) return null
+  return `/sites/default/files/bongolava_job/${profile.value.logo_path}`
+})
+
 async function onCvChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
@@ -548,7 +555,7 @@ onMounted(() => { loadProfile(); loadApplications() })
                 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
                   <div class="relative w-20 h-20 mx-auto mb-3">
                     <div class="w-20 h-20 rounded-2xl border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center shadow-sm">
-                      <img v-if="profile?.logo_path" :src="String(profile.logo_path)" alt="Logo" class="w-full h-full object-cover" />
+                      <img v-if="profile?.logo_path" :src="logoFullUrl" alt="Logo" class="w-full h-full object-cover" />
                       <Building2 v-else :size="28" class="text-gray-300" />
                     </div>
                     <button
@@ -611,7 +618,7 @@ onMounted(() => { loadProfile(); loadApplications() })
 
                 <!-- Post a job CTA -->
                 <RouterLink
-                  to="/jobs"
+                  to="/jobs/new"
                   class="flex items-center justify-between p-5 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-100 rounded-2xl group hover:shadow-sm transition"
                 >
                   <div>

@@ -18,6 +18,9 @@ export const API_ROUTES = {
   job: (id: number | string) => `${PREFIX}/jobs/${id}`,
   myJobs: `${PREFIX}/my-jobs`,
   jobApply: (jobId: number | string) => `${PREFIX}/jobs/${jobId}/apply`,
+  jobCreate: `${PREFIX}/jobs`,
+  jobUpdate: (id: number | string) => `${PREFIX}/jobs/${id}`,
+  jobDelete: (id: number | string) => `${PREFIX}/jobs/${id}`,
 
   // Events
   events: `${PREFIX}/events`,
@@ -43,6 +46,12 @@ export const API_ROUTES = {
 
   // Contact
   contact: `${PREFIX}/contact`,
+
+  // Taxonomies
+  taxonomies: `${PREFIX}/taxonomies`,
+  taxonomy: (vocabulary: string) => `${PREFIX}/taxonomies/${vocabulary}`,
+  taxonomyTerm: (vocabulary: string, termName: string) => `${PREFIX}/taxonomies/${vocabulary}/${termName}`,
+  taxonomiesBatch: `${PREFIX}/taxonomies/batch`,
 } as const
 
 /** Content types mapped to list/detail API routes. */

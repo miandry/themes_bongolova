@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Candidate, Application } from '@/types/entities'
-import type { CandidateSearchFilters } from '@/types/entities'
+import type { CandidateSearchFilters, PaginatedResponse } from '@/types/entities'
 import { API_ROUTES } from '@/services/api-urls'
 import {
   apiGet,
@@ -10,7 +10,7 @@ import {
   apiPostForm,
   apiDelete,
   toQueryString,
-  normalizeList,
+  normalizePaginatedList,
 } from '@/services/api.service'
 import { useAuthStore } from '@/stores/auth/auth.store'
 
@@ -33,6 +33,11 @@ export const useUserStore = defineStore('user', () => {
   const candidateLoading = ref(false)
   const candidatesError = ref<string | null>(null)
   const candidateError = ref<string | null>(null)
+
+  const candidatesTotal = ref(0)
+  const candidatesCurrentPage = ref(1)
+  const candidatesLastPage = ref(1)
+  const candidatesPerPage = ref(12)
 
   // ── Applications ────────────────────────────────────────────────────────
   const applications = ref<Application[]>([])
@@ -212,9 +217,24 @@ export const useUserStore = defineStore('user', () => {
       const path = API_ROUTES.candidates + toQueryString({
         keyword: filters.keyword,
         location: filters.location,
+        per_page: filters.per_page,
+        page: filters.page,
       })
-      const data = await apiGet<Candidate[] | { data?: Candidate[] }>(path)
-      candidates.value = normalizeList(data)
+      const data = await apiGet<Candidate[] | PaginatedResponse<Candidate>>(path)
+      const { items, meta } = normalizePaginatedList(data)
+      candidates.value = items
+      if (meta) {
+        candidatesTotal.value = meta.total
+        candidatesCurrentPage.value = meta.current_page
+        candidatesLastPage.value = meta.last_page
+        candidatesPerPage.value = meta.per_page
+      }
+      else {
+        candidatesTotal.value = items.length
+        candidatesCurrentPage.value = 1
+        candidatesLastPage.value = 1
+        candidatesPerPage.value = items.length
+      }
       candidatesCacheKey = key
       candidatesCacheTime = Date.now()
       return candidates.value
@@ -323,6 +343,10 @@ export const useUserStore = defineStore('user', () => {
     candidateLoading,
     candidatesError,
     candidateError,
+    candidatesTotal,
+    candidatesCurrentPage,
+    candidatesLastPage,
+    candidatesPerPage,
     applications,
     applicationsLoading,
     savedJobIds,
