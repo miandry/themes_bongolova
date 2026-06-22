@@ -41,7 +41,7 @@ const formatSalary = (job: { salary?: string }) => job.salary
                 <span v-if="job.is_urgent ?? job.urgent" class="px-2 py-0.5 bg-gradient-to-r from-orange-100 to-orange-200 rounded-md text-[10px] font-bold text-orange-700 flex items-center gap-0.5"><Zap :size="10" class="fill-current" /> Urgent</span>
                 <span v-if="job.is_remote ?? job.remote" class="px-2 py-0.5 bg-gradient-to-r from-green-100 to-green-200 rounded-md text-[10px] font-bold text-green-700">🌍 Remote</span>
               </div>
-              <button class="p-1.5 rounded-full hover:bg-red-50 transition-all duration-200">
+              <button class="p-1.5 rounded-full hover:bg-red-50 transition-all duration-200 hidden">
                 <Heart :size="16" class="text-gray-300 hover:text-red-400" />
               </button>
             </div>

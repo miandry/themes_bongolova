@@ -272,7 +272,7 @@ const formatSalary = (job: { salary?: string | number }) => {
                   <span v-if="job.is_remote ?? job.remote"
                     class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-[10px] font-bold tracking-wide">À distance</span>
                 </div>
-                <button class="p-1.5 rounded-full hover:bg-red-50 transition-all">
+                <button class="p-1.5 rounded-full hover:bg-red-50 transition-all hidden">
                   <Heart :size="18" class="text-gray-300 hover:text-red-400 transition-colors" />
                 </button>
               </div>
@@ -346,7 +346,7 @@ const formatSalary = (job: { salary?: string | number }) => {
                 </div>
               </div>
               <div class="flex items-center gap-3 flex-shrink-0">
-                <button class="p-2 rounded-full hover:bg-gray-100 transition">
+                <button class="p-2 rounded-full hover:bg-gray-100 transition hidden">
                   <Heart :size="18" class="text-gray-300 hover:text-red-400 transition-colors" />
                 </button>
                 <RouterLink :to="`/jobs/${job.id}`"

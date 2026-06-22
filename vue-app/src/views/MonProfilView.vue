@@ -7,7 +7,7 @@ import {
   Linkedin, Edit3, Save, X, Upload, FileText, Trash2,
   Building2, CheckCircle2, Award, BookOpen, Languages,
   Camera, Link2, LogOut, ChevronRight, Loader2,
-  Eye, EyeOff, Circle,
+  Eye, EyeOff, Circle, AlertCircle,
 } from 'lucide-vue-next'
 import Header from '@/components/Header.vue'
 import Footer from '@/components/Footer.vue'
@@ -38,6 +38,18 @@ const saveMsg = ref('')
 const availabilityUpdating = ref(false)
 const form = ref<Record<string, string>>({})
 
+// Fonction pour formater le texte avec sauts de ligne
+const formatText = (text: string | undefined) => {
+  if (!text) return '—'
+  return text.replace(/\n/g, '<br>')
+}
+
+// Fonction pour diviser le texte en lignes
+const splitLines = (text: string | undefined) => {
+  if (!text) return []
+  return text.split('\n').filter(line => line.trim() !== '')
+}
+
 function startEdit() {
   const p = profile.value ?? {}
   form.value = Object.fromEntries(
@@ -62,20 +74,17 @@ async function saveProfile() {
   } catch { /* error in store */ }
 }
 
-// Ajoutez cette fonction dans la section des méthodes
 async function toggleAvailability() {
   if (!profile.value) return
-  
+
   availabilityUpdating.value = true
   try {
     const newAvailability = !profile.value.available
     await userStore.updateMyProfile({ available: newAvailability })
-    // Recharge le profil pour avoir les données à jour
     await loadProfile()
-    
-    // Message de confirmation optionnel
-    saveMsg.value = newAvailability 
-      ? 'Profil publié avec succès !' 
+
+    saveMsg.value = newAvailability
+      ? 'Profil publié avec succès !'
       : 'Profil dépublié avec succès !'
     setTimeout(() => { saveMsg.value = '' }, 3000)
   } catch (error) {
@@ -102,11 +111,14 @@ const cvFullUrl = computed(() => {
   return `/sites/bongolava/files/bongolava_job/${profile.value.cv_path}`
 })
 
-// const logoInput = ref<HTMLInputElement | null>(null)
-
 const logoFullUrl = computed(() => {
   if (!profile.value?.logo_path) return null
   return `/sites/bongolava/files/bongolava_job/${profile.value.logo_path}`
+})
+
+const photoFullUrl = computed(() => {
+  if (!profile.value?.photo_path) return null
+  return `/sites/bongolava/files/bongolava_job/${profile.value.photo_path}`
 })
 
 async function onCvChange(e: Event) {
@@ -146,13 +158,13 @@ function initials() {
 
 function roleLabel() {
   if (authRole.value === 'recruiter') return 'Recruteur'
-  if (authRole.value === 'admin')     return 'Admin'
+  if (authRole.value === 'admin') return 'Admin'
   return 'Candidat'
 }
 
 function roleColor() {
   if (authRole.value === 'recruiter') return 'bg-blue-100 text-blue-700'
-  if (authRole.value === 'admin')     return 'bg-purple-100 text-purple-700'
+  if (authRole.value === 'admin') return 'bg-purple-100 text-purple-700'
   return 'bg-green-100 text-green-700'
 }
 
@@ -210,40 +222,32 @@ onMounted(() => { loadProfile(); loadApplications() })
 
                 <!-- Avatar / photo -->
                 <div class="relative w-24 h-24 flex-shrink-0">
-                  <div class="w-24 h-24 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center">
-                    <span v-if="!profile?.photo_path" class="text-white text-3xl font-black">{{ initials() }}</span>
-                    <img v-else :src="String(profile.photo_path)" alt="Photo" class="w-full h-full object-cover" />
+                  <div
+                    class="w-24 h-24 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center">
+                    <span v-if="!photoFullUrl" class="text-white text-3xl font-black">{{ initials() }}</span>
+                    <img v-else :src="photoFullUrl" alt="Photo" class="w-full h-full object-cover" />
                   </div>
                   <!-- Photo upload button (candidate) -->
-                  <button
-                    v-if="authRole === 'candidate'"
-                    type="button"
+                  <button v-if="authRole === 'candidate'" type="button"
                     class="absolute -bottom-1 -right-1 w-7 h-7 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow hover:bg-gray-50 transition"
-                    :disabled="photoLoading"
-                    @click="photoInput?.click()"
-                    title="Changer la photo"
-                  >
+                    :disabled="photoLoading" @click="photoInput?.click()" title="Changer la photo">
                     <Loader2 v-if="photoLoading" :size="12" class="animate-spin text-gray-500" />
                     <Camera v-else :size="12" class="text-gray-600" />
                   </button>
-                  <input ref="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onPhotoChange" />
+                  <input ref="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden"
+                    @change="onPhotoChange" />
                 </div>
 
                 <!-- Actions -->
                 <div class="flex items-center gap-2 sm:mb-1">
                   <!-- Bouton Publier/Dépublier (visible seulement quand on n'est pas en mode édition) -->
-                  <button
-                    v-if="!editing && authRole === 'candidate'"
-                    type="button"
-                    :disabled="availabilityUpdating"
+                  <button v-if="!editing && authRole === 'candidate'" type="button" :disabled="availabilityUpdating"
                     :class="[
                       'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition',
-                      profile?.available 
-                        ? 'bg-amber-500 text-white hover:bg-amber-600' 
+                      profile?.available
+                        ? 'bg-amber-500 text-white hover:bg-amber-600'
                         : 'bg-blue-600 text-white hover:bg-blue-700'
-                    ]"
-                    @click="toggleAvailability"
-                  >
+                    ]" @click="toggleAvailability">
                     <Loader2 v-if="availabilityUpdating" :size="14" class="animate-spin" />
                     <EyeOff v-else-if="profile?.available" :size="14" />
                     <Eye v-else :size="14" />
@@ -251,34 +255,32 @@ onMounted(() => { loadProfile(); loadApplications() })
                   </button>
 
                   <!-- Bouton Modifier -->
-                  <button
-                    v-if="!editing"
-                    type="button"
+                  <button v-if="!editing" type="button"
                     class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition"
-                    @click="startEdit"
-                  >
+                    @click="startEdit">
                     <Edit3 :size="14" /> Modifier
                   </button>
-                  
+
                   <!-- Boutons Enregistrer/Annuler en mode édition -->
                   <template v-else>
-                    <button
-                      type="button"
-                      :disabled="profileSaving"
+                    <button type="button" :disabled="profileSaving"
                       class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition disabled:opacity-60"
-                      @click="saveProfile"
-                    >
+                      @click="saveProfile">
                       <Loader2 v-if="profileSaving" :size="14" class="animate-spin" />
                       <Save v-else :size="14" />
                       Enregistrer
                     </button>
-                    <button type="button" class="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-200 transition" @click="cancelEdit">
+                    <button type="button"
+                      class="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-200 transition"
+                      @click="cancelEdit">
                       <X :size="14" /> Annuler
                     </button>
                   </template>
-                  
+
                   <!-- Bouton Déconnexion -->
-                  <button type="button" class="flex items-center gap-2 px-3 py-2 border border-red-200 text-red-500 rounded-xl text-sm font-semibold hover:bg-red-50 transition" @click="handleLogout">
+                  <button type="button"
+                    class="flex items-center gap-2 px-3 py-2 border border-red-200 text-red-500 rounded-xl text-sm font-semibold hover:bg-red-50 transition"
+                    @click="handleLogout">
                     <LogOut :size="14" />
                   </button>
                 </div>
@@ -288,22 +290,20 @@ onMounted(() => { loadProfile(); loadApplications() })
               <div class="flex flex-wrap items-center gap-3">
                 <div>
                   <h1 class="text-2xl font-black text-gray-900 flex items-center gap-2">
-                    {{ authRole === 'recruiter' ? String(profile?.organization ?? currentUser?.name) : `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || currentUser?.name }}
-                    
+                    {{ authRole === 'recruiter' ? String(profile?.organization ?? currentUser?.name) :
+                      `${profile?.first_name ?? ''}
+                    ${profile?.last_name ?? ''}`.trim() || currentUser?.name }}
+
                     <!-- Point indicateur de statut pour les candidats -->
                     <span v-if="authRole === 'candidate'" class="relative flex h-3 w-3">
-                      <span 
-                        :class="[
-                          'absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping',
-                          profile?.available ? 'bg-green-400' : 'bg-red-400'
-                        ]"
-                      ></span>
-                      <span 
-                        :class="[
-                          'relative inline-flex rounded-full h-3 w-3',
-                          profile?.available ? 'bg-green-500' : 'bg-red-500'
-                        ]"
-                      ></span>
+                      <span :class="[
+                        'absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping',
+                        profile?.available ? 'bg-green-400' : 'bg-red-400'
+                      ]"></span>
+                      <span :class="[
+                        'relative inline-flex rounded-full h-3 w-3',
+                        profile?.available ? 'bg-green-500' : 'bg-red-500'
+                      ]"></span>
                     </span>
                   </h1>
                   <p class="text-gray-500 text-sm mt-0.5">{{ currentUser?.email }}</p>
@@ -311,17 +311,21 @@ onMounted(() => { loadProfile(); loadApplications() })
                 <span :class="['text-xs font-bold uppercase px-3 py-1 rounded-full', roleColor()]">
                   {{ roleLabel() }}
                 </span>
-                <span v-if="authRole === 'candidate' && profile?.job_target" class="text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600">
+                <span v-if="authRole === 'candidate' && profile?.job_target"
+                  class="text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600">
                   {{ String(profile.job_target) }}
                 </span>
               </div>
 
 
               <!-- Success / error banners -->
-              <div v-if="saveMsg" class="mt-3 px-4 py-2 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-center gap-2">
+              <div v-if="saveMsg"
+                class="mt-3 px-4 py-2 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-center gap-2">
                 <CheckCircle2 :size="14" /> {{ saveMsg }}
               </div>
-              <div v-if="profileError" class="mt-3 px-4 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{{ profileError }}</div>
+              <div v-if="profileError"
+                class="mt-3 px-4 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{{
+                  profileError }}</div>
             </div>
           </div>
 
@@ -342,7 +346,8 @@ onMounted(() => { loadProfile(); loadApplications() })
                     <div class="flex items-center gap-3">
                       <Phone :size="14" class="text-gray-400 flex-shrink-0" />
                       <template v-if="editing">
-                        <input v-model="form.phone" type="tel" placeholder="+261 34 00 00 00" class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
+                        <input v-model="form.phone" type="tel" placeholder="+261 34 00 00 00"
+                          class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
                       </template>
                       <span v-else class="text-sm text-gray-700">{{ profile?.phone ?? '—' }}</span>
                     </div>
@@ -350,7 +355,8 @@ onMounted(() => { loadProfile(); loadApplications() })
                     <div class="flex items-center gap-3">
                       <Mail :size="14" class="text-gray-400 flex-shrink-0" />
                       <template v-if="editing">
-                        <input v-model="form.email" type="email" placeholder="email@example.com" class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
+                        <input v-model="form.email" type="email" placeholder="email@example.com"
+                          class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
                       </template>
                       <span v-else class="text-sm text-gray-700">{{ profile?.email ?? currentUser?.email }}</span>
                     </div>
@@ -358,7 +364,8 @@ onMounted(() => { loadProfile(); loadApplications() })
                     <div class="flex items-center gap-3">
                       <MapPin :size="14" class="text-gray-400 flex-shrink-0" />
                       <template v-if="editing">
-                        <input v-model="form.location" type="text" placeholder="Tsiroanomandidy" class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
+                        <input v-model="form.location" type="text" placeholder="Tsiroanomandidy"
+                          class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
                       </template>
                       <span v-else class="text-sm text-gray-700">{{ profile?.location ?? '—' }}</span>
                     </div>
@@ -366,27 +373,33 @@ onMounted(() => { loadProfile(); loadApplications() })
                     <div class="flex items-center gap-3">
                       <Link2 :size="14" class="text-gray-400 flex-shrink-0" />
                       <template v-if="editing">
-                        <input v-model="form.website" type="url" placeholder="https://…" class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
+                        <input v-model="form.website" type="url" placeholder="https://…"
+                          class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
                       </template>
-                      <a v-else-if="profile?.website" :href="String(profile.website)" target="_blank" class="text-sm text-blue-600 hover:underline truncate">{{ String(profile.website) }}</a>
+                      <a v-else-if="profile?.website" :href="String(profile.website)" target="_blank"
+                        class="text-sm text-blue-600 hover:underline truncate">{{ String(profile.website) }}</a>
                       <span v-else class="text-sm text-gray-400">—</span>
                     </div>
                     <!-- LinkedIn -->
                     <div class="flex items-center gap-3 hidden">
                       <Linkedin :size="14" class="text-gray-400 flex-shrink-0" />
                       <template v-if="editing">
-                        <input v-model="form.linkedin" type="url" placeholder="https://linkedin.com/in/…" class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
+                        <input v-model="form.linkedin" type="url" placeholder="https://linkedin.com/in/…"
+                          class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
                       </template>
-                      <a v-else-if="profile?.linkedin" :href="String(profile.linkedin)" target="_blank" class="text-sm text-blue-600 hover:underline truncate">LinkedIn</a>
+                      <a v-else-if="profile?.linkedin" :href="String(profile.linkedin)" target="_blank"
+                        class="text-sm text-blue-600 hover:underline truncate">LinkedIn</a>
                       <span v-else class="text-sm text-gray-400">—</span>
                     </div>
                     <!-- GitHub -->
                     <div class="flex items-center gap-3 hidden">
                       <Github :size="14" class="text-gray-400 flex-shrink-0" />
                       <template v-if="editing">
-                        <input v-model="form.github" type="url" placeholder="https://github.com/…" class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
+                        <input v-model="form.github" type="url" placeholder="https://github.com/…"
+                          class="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-400" />
                       </template>
-                      <a v-else-if="profile?.github" :href="String(profile.github)" target="_blank" class="text-sm text-blue-600 hover:underline truncate">GitHub</a>
+                      <a v-else-if="profile?.github" :href="String(profile.github)" target="_blank"
+                        class="text-sm text-blue-600 hover:underline truncate">GitHub</a>
                       <span v-else class="text-sm text-gray-400">—</span>
                     </div>
                   </div>
@@ -396,11 +409,13 @@ onMounted(() => { loadProfile(); loadApplications() })
                 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                   <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Compétences</h2>
                   <template v-if="editing">
-                    <input v-model="form.skills" type="text" placeholder="Agriculture, Gestion, Excel…" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-400" />
+                    <input v-model="form.skills" type="text" placeholder="Agriculture, Gestion, Excel…"
+                      class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-400" />
                     <p class="text-[10px] text-gray-400 mt-1">Séparées par des virgules</p>
                   </template>
                   <div v-else class="flex flex-wrap gap-2">
-                    <span v-for="sk in skillsArray(profile?.skills)" :key="sk" class="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-100">
+                    <span v-for="sk in skillsArray(profile?.skills)" :key="sk"
+                      class="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-100">
                       {{ sk }}
                     </span>
                     <span v-if="!skillsArray(profile?.skills).length" class="text-sm text-gray-400">—</span>
@@ -413,40 +428,38 @@ onMounted(() => { loadProfile(); loadApplications() })
                     <Languages :size="13" /> Langues
                   </h2>
                   <template v-if="editing">
-                    <input v-model="form.languages" type="text" placeholder="Français, Malagasy, Anglais" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-400" />
+                    <input v-model="form.languages" type="text" placeholder="Français, Malagasy, Anglais"
+                      class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-400" />
                   </template>
                   <div v-else class="flex flex-wrap gap-2">
-                    <span v-for="lang in skillsArray(profile?.languages)" :key="lang" class="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100">{{ lang }}</span>
+                    <span v-for="lang in skillsArray(profile?.languages)" :key="lang"
+                      class="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100">{{
+                        lang
+                      }}</span>
                     <span v-if="!skillsArray(profile?.languages).length" class="text-sm text-gray-400">—</span>
                   </div>
                 </div>
 
                 <!-- CV card -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5" v-if="!editing">
                   <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
                     <FileText :size="13" /> CV
                   </h2>
                   <div v-if="profile?.cv_path" class="flex items-center gap-3 mb-3">
                     <FileText :size="20" class="text-green-600 flex-shrink-0" />
-                    <a 
-                      :href="cvFullUrl"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-sm text-green-600 hover:text-green-700 hover:underline truncate flex-1"
-                    >
+                    <a :href="cvFullUrl" target="_blank" rel="noopener noreferrer"
+                      class="text-sm text-green-600 hover:text-green-700 hover:underline truncate flex-1">
                       Voir mon CV
                     </a>
-                    <button type="button" :disabled="cvDeleting" class="text-red-400 hover:text-red-600 transition" @click="deleteCV">
+                    <button type="button" :disabled="cvDeleting" class="text-red-400 hover:text-red-600 transition"
+                      @click="deleteCV">
                       <Loader2 v-if="cvDeleting" :size="14" class="animate-spin" />
                       <Trash2 v-else :size="14" />
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    :disabled="cvLoading"
+                  <button type="button" :disabled="cvLoading"
                     class="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 hover:border-green-400 hover:text-green-600 transition"
-                    @click="cvInput?.click()"
-                  >
+                    @click="cvInput?.click()">
                     <Loader2 v-if="cvLoading" :size="14" class="animate-spin" />
                     <Upload v-else :size="14" />
                     {{ profile?.cv_path ? 'Remplacer le CV' : 'Uploader un CV (PDF)' }}
@@ -476,18 +489,27 @@ onMounted(() => { loadProfile(); loadApplications() })
                     </label>
                     <label class="flex flex-col gap-1">
                       <span class="text-xs font-semibold text-gray-500">Poste recherché</span>
-                      <input v-if="editing" v-model="form.job_target" type="text" class="inp" placeholder="Ingénieur agronome" />
+                      <input v-if="editing" v-model="form.job_target" type="text" class="inp"
+                        placeholder="Ingénieur agronome" />
                       <span v-else class="text-sm text-gray-800">{{ profile?.job_target ?? '—' }}</span>
                     </label>
                     <label class="flex flex-col gap-1">
                       <span class="text-xs font-semibold text-gray-500">Expérience</span>
-                      <input v-if="editing" v-model="form.experience_level" type="text" class="inp" placeholder="5 ans" />
+                      <input v-if="editing" v-model="form.experience_level" type="text" class="inp"
+                        placeholder="5 ans" />
                       <span v-else class="text-sm text-gray-800">{{ profile?.experience_level ?? '—' }}</span>
                     </label>
                     <label class="col-span-full flex flex-col gap-1">
                       <span class="text-xs font-semibold text-gray-500">Présentation</span>
-                      <textarea v-if="editing" v-model="form.bio" rows="3" class="inp resize-none" placeholder="Décrivez votre parcours…" />
-                      <p v-else class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ profile?.bio ?? '—' }}</p>
+                      <template v-if="editing">
+                        <textarea v-model="form.bio" rows="4" class="inp resize-none"
+                          placeholder="Décrivez votre parcours…" />
+                        <div class="flex items-center gap-1 mt-1 text-[10px] text-amber-600">
+                          <AlertCircle :size="12" />
+                          <span>Utilisez un saut de ligne pour séparer les paragraphes</span>
+                        </div>
+                      </template>
+                      <div v-else class="text-sm text-gray-700 leading-relaxed" v-html="formatText(profile?.bio)"></div>
                     </label>
                   </div>
                 </div>
@@ -498,10 +520,15 @@ onMounted(() => { loadProfile(); loadApplications() })
                     <BookOpen :size="13" /> Formation
                   </h2>
                   <template v-if="editing">
-                    <textarea v-model="form.educations" rows="3" class="inp w-full resize-none" placeholder="Ex: Master Agronomie — Université d'Antananarivo (2020)" />
-                    <p class="text-[10px] text-gray-400 mt-1">Une formation par ligne</p>
+                    <textarea v-model="form.educations" rows="4" class="inp w-full resize-none"
+                      placeholder="Ex: Master 2 en informatique - CNTEMAD - 2025" />
+                    <div class="flex items-center gap-1 mt-1 text-[10px] text-amber-600">
+                      <AlertCircle :size="12" />
+                      <span>Utilisez un saut de ligne pour séparer chaque formation</span>
+                    </div>
                   </template>
-                  <p v-else class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ profile?.educations ?? '—' }}</p>
+                  <div v-else class="text-sm text-gray-700 leading-relaxed" v-html="formatText(profile?.educations)">
+                  </div>
                 </div>
 
                 <!-- Certifications -->
@@ -510,9 +537,15 @@ onMounted(() => { loadProfile(); loadApplications() })
                     <Award :size="13" /> Certifications
                   </h2>
                   <template v-if="editing">
-                    <textarea v-model="form.certifications" rows="2" class="inp w-full resize-none" placeholder="Ex: Agriculture Durable (2022)" />
+                    <textarea v-model="form.certifications" rows="3" class="inp w-full resize-none"
+                      placeholder="Ex: The Hacking Project - SAYNA - 2020" />
+                    <div class="flex items-center gap-1 mt-1 text-[10px] text-amber-600">
+                      <AlertCircle :size="12" />
+                      <span>Utilisez un saut de ligne pour séparer chaque certification</span>
+                    </div>
                   </template>
-                  <p v-else class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ profile?.certifications ?? '—' }}</p>
+                  <div v-else class="text-sm text-gray-700 leading-relaxed"
+                    v-html="formatText(profile?.certifications)"></div>
                 </div>
 
                 <!-- My applications -->
@@ -525,15 +558,21 @@ onMounted(() => { loadProfile(); loadApplications() })
                   </div>
                   <div v-else-if="!applications.length" class="text-sm text-gray-400 text-center py-6">
                     Aucune candidature pour l'instant.
-                    <RouterLink to="/jobs" class="block mt-2 text-green-600 font-semibold hover:underline">Voir les offres →</RouterLink>
+                    <RouterLink to="/jobs" class="block mt-2 text-green-600 font-semibold hover:underline">Voir les
+                      offres →
+                    </RouterLink>
                   </div>
                   <div v-else class="divide-y divide-gray-100">
-                    <div v-for="app in applications" :key="String(app.id)" class="flex items-center justify-between py-3 gap-3">
+                    <div v-for="app in applications" :key="String(app.id)"
+                      class="flex items-center justify-between py-3 gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-semibold text-gray-900 truncate">{{ String(app.job_title ?? '—') }}</p>
-                        <p class="text-xs text-gray-400">{{ String(app.company_name ?? '') }} · {{ String(app.applied_at ?? '').slice(0, 10) }}</p>
+                        <p class="text-xs text-gray-400">{{ String(app.company_name ?? '') }} · {{ String(app.applied_at
+                          ??
+                          '').slice(0, 10) }}</p>
                       </div>
-                      <span :class="['flex-shrink-0 text-[10px] font-bold uppercase px-2 py-1 rounded-full', statusColor(app.status)]">
+                      <span
+                        :class="['flex-shrink-0 text-[10px] font-bold uppercase px-2 py-1 rounded-full', statusColor(app.status)]">
                         {{ statusLabel(app.status) }}
                       </span>
                     </div>
@@ -552,22 +591,21 @@ onMounted(() => { loadProfile(); loadApplications() })
               <!-- Left: logo + contact -->
               <div class="space-y-6">
                 <!-- Logo -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center" v-if="!editing">
                   <div class="relative w-20 h-20 mx-auto mb-3">
-                    <div class="w-20 h-20 rounded-2xl border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center shadow-sm">
+                    <div
+                      class="w-20 h-20 rounded-2xl border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center shadow-sm">
                       <img v-if="profile?.logo_path" :src="logoFullUrl" alt="Logo" class="w-full h-full object-cover" />
                       <Building2 v-else :size="28" class="text-gray-300" />
                     </div>
-                    <button
-                      type="button"
-                      :disabled="logoLoading"
+                    <button type="button" :disabled="logoLoading"
                       class="absolute -bottom-1 -right-1 w-7 h-7 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow hover:bg-gray-50 transition"
-                      @click="logoInput?.click()"
-                    >
+                      @click="logoInput?.click()">
                       <Loader2 v-if="logoLoading" :size="12" class="animate-spin text-gray-500" />
                       <Camera v-else :size="12" class="text-gray-600" />
                     </button>
-                    <input ref="logoInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onLogoChange" />
+                    <input ref="logoInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden"
+                      @change="onLogoChange" />
                   </div>
                   <p class="text-xs text-gray-400">Logo de l'organisation</p>
                 </div>
@@ -578,18 +616,22 @@ onMounted(() => { loadProfile(); loadApplications() })
                   <div class="space-y-3">
                     <div class="flex items-center gap-3">
                       <Phone :size="14" class="text-gray-400 flex-shrink-0" />
-                      <input v-if="editing" v-model="form.phone" type="tel" class="inp flex-1" placeholder="+261 34 00 00 00" />
+                      <input v-if="editing" v-model="form.phone" type="tel" class="inp flex-1"
+                        placeholder="+261 34 00 00 00" />
                       <span v-else class="text-sm text-gray-700">{{ profile?.phone ?? '—' }}</span>
                     </div>
                     <div class="flex items-center gap-3">
                       <MapPin :size="14" class="text-gray-400 flex-shrink-0" />
-                      <input v-if="editing" v-model="form.address" type="text" class="inp flex-1" placeholder="Tsiroanomandidy" />
+                      <input v-if="editing" v-model="form.address" type="text" class="inp flex-1"
+                        placeholder="Tsiroanomandidy" />
                       <span v-else class="text-sm text-gray-700">{{ profile?.address ?? '—' }}</span>
                     </div>
                     <div class="flex items-center gap-3">
                       <Globe :size="14" class="text-gray-400 flex-shrink-0" />
-                      <input v-if="editing" v-model="form.website" type="url" class="inp flex-1" placeholder="https://…" />
-                      <a v-else-if="profile?.website" :href="String(profile.website)" target="_blank" class="text-sm text-blue-600 hover:underline truncate">{{ String(profile.website) }}</a>
+                      <input v-if="editing" v-model="form.website" type="url" class="inp flex-1"
+                        placeholder="https://…" />
+                      <a v-else-if="profile?.website" :href="String(profile.website)" target="_blank"
+                        class="text-sm text-blue-600 hover:underline truncate">{{ String(profile.website) }}</a>
                       <span v-else class="text-sm text-gray-400">—</span>
                     </div>
                   </div>
@@ -605,7 +647,8 @@ onMounted(() => { loadProfile(); loadApplications() })
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <label class="col-span-full flex flex-col gap-1">
                       <span class="text-xs font-semibold text-gray-500">Nom de l'organisation</span>
-                      <input v-if="editing" v-model="form.organization" type="text" class="inp" placeholder="Ferme de Bongolava" />
+                      <input v-if="editing" v-model="form.organization" type="text" class="inp"
+                        placeholder="Ferme de Bongolava" />
                       <span v-else class="text-sm text-gray-800 font-semibold">{{ profile?.organization ?? '—' }}</span>
                     </label>
                     <label class="flex flex-col gap-1">
@@ -617,10 +660,8 @@ onMounted(() => { loadProfile(); loadApplications() })
                 </div>
 
                 <!-- Post a job CTA -->
-                <RouterLink
-                  to="/jobs/new"
-                  class="flex items-center justify-between p-5 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-100 rounded-2xl group hover:shadow-sm transition"
-                >
+                <RouterLink to="/jobs/new"
+                  class="flex items-center justify-between p-5 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-100 rounded-2xl group hover:shadow-sm transition">
                   <div>
                     <p class="font-bold text-gray-900 text-sm">Publier une offre d'emploi</p>
                     <p class="text-xs text-gray-500 mt-0.5">Trouvez les meilleurs talents de la région</p>
@@ -650,6 +691,7 @@ onMounted(() => { loadProfile(); loadApplications() })
   color: #1f2937;
   transition: all 0.15s;
 }
+
 .inp:focus {
   outline: none;
   border-color: transparent;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
@@ -76,6 +76,14 @@ function applyFilters(resetPage = true) {
   if (resetPage) currentPage.value = 1
   syncRoute()
   loadCandidates()
+}
+
+// ✅ Fonction pour obtenir l'URL complète de la photo
+function getPhotoUrl(photoPath: string | null | undefined): string | null {
+  if (!photoPath) return null
+
+  // Sinon on construit le chemin complet
+  return `/sites/bongolava/files/bongolava_job/${photoPath}`
 }
 
 onMounted(async () => {
@@ -192,8 +200,15 @@ const toggleSave = (id: number) => userStore.toggleSavedProfile(id)
           <!-- Contenu Grid -->
           <div v-if="viewMode === 'grid'" class="text-center">
             <div class="relative inline-block mb-4">
-              <div class="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xl font-bold shadow-md">
-                {{ getInitials(c) }}
+              <!-- ✅ Affichage de la photo si elle existe, sinon les initiales -->
+              <div class="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xl font-bold shadow-md">
+                <img 
+                  v-if="c.photo_path" 
+                  :src="getPhotoUrl(c.photo_path)" 
+                  :alt="`${c.first_name} ${c.last_name}`" 
+                  class="w-full h-full object-cover"
+                />
+                <span v-else>{{ getInitials(c) }}</span>
               </div>
             </div>
             <button @click="toggleSave(c.id)" class="absolute top-3 right-3 p-1.5 rounded-full hover:bg-red-50 transition">
@@ -204,9 +219,9 @@ const toggleSave = (id: number) => userStore.toggleSavedProfile(id)
             <div class="flex items-center justify-center gap-1 text-xs text-gray-500 mb-3">
               <MapPin :size="12" class="text-purple-500" /> {{ c.location }}
             </div>
-            <div class="flex flex-wrap justify-center gap-1 mb-4">
+            <!-- <div class="flex flex-wrap justify-center gap-1 mb-4">
               <span v-for="skill in skillPreview(c)" :key="skill" class="px-2 py-0.5 bg-gray-100 rounded-full text-[9px] text-gray-600">{{ skill }}</span>
-            </div>
+            </div> -->
             <RouterLink :to="`/profils/${c.id}`" class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-xs font-bold hover:shadow-md transition flex items-center justify-center gap-1">
               Voir le profil <ArrowUpRight :size="12" />
             </RouterLink>
@@ -214,8 +229,15 @@ const toggleSave = (id: number) => userStore.toggleSavedProfile(id)
 
           <!-- Contenu Liste -->
           <div v-else class="flex flex-col sm:flex-row items-center gap-4">
-            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0 flex items-center justify-center text-white text-xl font-bold shadow-md">
-              {{ getInitials(c) }}
+            <!-- ✅ Affichage de la photo si elle existe, sinon les initiales -->
+            <div class="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0 flex items-center justify-center text-white text-xl font-bold shadow-md">
+              <img 
+                v-if="c.photo_path" 
+                :src="getPhotoUrl(c.photo_path)" 
+                :alt="`${c.first_name} ${c.last_name}`" 
+                class="w-full h-full object-cover"
+              />
+              <span v-else>{{ getInitials(c) }}</span>
             </div>
             <div class="flex-grow text-center sm:text-left">
               <h3 class="text-lg font-bold text-gray-900">{{ c.first_name }} {{ c.last_name }}</h3>
@@ -226,7 +248,7 @@ const toggleSave = (id: number) => userStore.toggleSavedProfile(id)
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <button @click="toggleSave(c.id)" class="p-2 rounded-full hover:bg-red-50 transition">
+              <button @click="toggleSave(c.id)" class="p-2 rounded-full hover:bg-red-50 transition hidden">
                 <Heart :size="16" :class="savedProfileIds.includes(c.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'" />
               </button>
               <RouterLink :to="`/profils/${c.id}`" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg text-xs font-bold hover:shadow-md transition">

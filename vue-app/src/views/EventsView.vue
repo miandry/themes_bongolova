@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import {
   Calendar, MapPin, Clock, ArrowRight,
-  Search, Filter, Users2
+  Search, Users2
 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import Header from '../components/Header.vue'
@@ -36,37 +36,86 @@ onMounted(async () => {
   } catch (err) {
     console.error('Error loading taxonomies:', err)
   }
-  
+
   // Load events
   await loadEvents()
 })
+
 watch([searchQuery, selectedType], loadEvents)
 
-// --- Utilitaires ---
-const parseEventDate = (event: { date?: string; time?: string }) => new Date(String(event.date) + 'T' + (event.time ?? '00:00'))
-const parseEventEndDate = (event: { date?: string; end_date?: string; time?: string; end_time?: string }) =>
-  new Date(String(event.end_date ?? event.date) + 'T' + (event.end_time ?? event.time ?? '00:00'))
-
-const formatDate = (event: { date?: string; time?: string }) => {
-  return parseEventDate(event).toLocaleDateString('fr-FR', {
+// --- Utilitaires pour les dates ---
+const formatDate = (dateString: string) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'long',
     year: 'numeric'
   })
 }
 
-const formatTime = (dateObj: Date) => {
-  if (dateObj instanceof Date) {
-    return dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+const formatTime = (dateString: string) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const getMonthShort = (dateString: string) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleString('fr', { month: 'short' }).toUpperCase()
+}
+
+const getDay = (dateString: string) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.getDate()
+}
+
+// --- Filtrage des événements ---
+const filteredEvents = computed(() => {
+  let result = events.value || []
+
+  // Filtre par recherche
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(event =>
+      event.title?.toLowerCase().includes(query) ||
+      event.description?.toLowerCase().includes(query) ||
+      event.location?.toLowerCase().includes(query)
+    )
   }
-  return ''
+
+  // Filtre par type
+  if (selectedType.value) {
+    result = result.filter(event =>
+      event.type === selectedType.value
+    )
+  }
+
+  return result
+})
+
+// Fonction pour extraire le type depuis la taxonomy
+const getEventType = (event: any) => {
+  if (event.type && typeof event.type === 'string') {
+    // Si le type est déjà une chaîne, on le retourne
+    return event.type
+  }
+  // Si c'est un objet taxonomy, on extrait le label
+  return event.type?.label || event.type?.name || 'Événement'
 }
 
-const getMonthShort = (event: { date?: string; time?: string }) => {
-  return parseEventDate(event).toLocaleString('fr', { month: 'short' }).toUpperCase()
+// Fonction pour obtenir le lieu
+const getLocation = (event: any) => {
+  if (event.location && typeof event.location === 'string') {
+    return event.location
+  }
+  return event.location?.label || event.location?.name || 'Lieu non spécifié'
 }
-
-const getDay = (event: { date?: string; time?: string }) => parseEventDate(event).getDate()
 </script>
 
 <template>
@@ -77,7 +126,8 @@ const getDay = (event: { date?: string; time?: string }) => parseEventDate(event
         <!-- En-tête -->
         <div class="mb-8">
           <h1 class="text-3xl md:text-4xl font-black text-gray-900">Événements</h1>
-          <p class="text-gray-500 mt-2">{{ events.length }} événement{{ events.length > 1 ? 's' : '' }} à venir</p>
+          <p class="text-gray-500 mt-2">{{ filteredEvents.length }} événement{{ filteredEvents.length > 1 ? 's' : '' }}
+            à venir</p>
         </div>
 
         <!-- Barre de recherche + Filtres -->
@@ -85,15 +135,12 @@ const getDay = (event: { date?: string; time?: string }) => parseEventDate(event
           <div class="flex flex-col md:flex-row gap-3">
             <div class="flex-1 flex items-center px-3 py-2 bg-gray-100 rounded-lg">
               <Search :size="18" class="text-gray-400 mr-2" />
-              <input 
-                v-model="searchQuery"
-                type="text" 
-                placeholder="Rechercher un événement..." 
-                class="bg-transparent outline-none w-full text-gray-800 placeholder:text-gray-400 text-sm"
-              />
+              <input v-model="searchQuery" type="text" placeholder="Rechercher un événement..."
+                class="bg-transparent outline-none w-full text-gray-800 placeholder:text-gray-400 text-sm" />
             </div>
             <div class="flex flex-wrap gap-2">
-              <select v-model="selectedType" class="px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-500">
+              <select v-model="selectedType"
+                class="px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-500">
                 <option value="">Tous types</option>
                 <option v-for="type in eventTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
               </select>
@@ -107,7 +154,8 @@ const getDay = (event: { date?: string; time?: string }) => parseEventDate(event
           <SkeletonCard v-for="n in 6" :key="n" :lines="3" />
         </div>
 
-        <div v-else-if="events.length === 0" class="text-center py-16 bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-200">
+        <div v-else-if="filteredEvents.length === 0"
+          class="text-center py-16 bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-200">
           <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar :size="32" class="text-gray-300" />
           </div>
@@ -116,27 +164,56 @@ const getDay = (event: { date?: string; time?: string }) => parseEventDate(event
         </div>
 
         <!-- Grille des événements -->
-        <div v-else-if="events.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="event in events" :key="event.id" class="group relative bg-white/70 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"></div>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div v-for="event in filteredEvents" :key="event.id"
+            class="group relative bg-white/70 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
+            <div
+              class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none">
+            </div>
+
             <div class="p-5">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex flex-col items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-300">
-                  <span class="text-xl font-bold">{{ getDay(event) }}</span>
-                  <span class="text-[9px] font-bold uppercase">{{ getMonthShort(event) }}</span>
+              <!-- En-tête avec date et titre -->
+              <div class="flex items-start gap-3 mb-3">
+                <div
+                  class="w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex flex-col items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
+                  <span class="text-xl font-bold">{{ getDay(event.date) }}</span>
+                  <span class="text-[9px] font-bold uppercase">{{ getMonthShort(event.date) }}</span>
                 </div>
-                <div>
-                  <span class="inline-block text-[10px] font-bold text-orange-700 uppercase bg-orange-50 px-2 py-0.5 rounded-full">{{ event.type }}</span>
-                  <h3 class="font-bold text-gray-900 line-clamp-1 mt-1 group-hover:text-orange-600 transition text-base">{{ event.title }}</h3>
+                <div class="flex-1 min-w-0">
+                  <span
+                    class="inline-block text-[10px] font-bold text-orange-700 uppercase bg-orange-50 px-2 py-0.5 rounded-full">
+                    {{ getEventType(event) }}
+                  </span>
+                  <h3
+                    class="font-bold text-gray-900 line-clamp-1 mt-1 group-hover:text-orange-600 transition text-base">
+                    {{ event.title }}
+                  </h3>
                 </div>
               </div>
+
+              <!-- Détails de l'événement -->
               <div class="space-y-1.5 text-xs text-gray-500 mb-3">
-                <p class="flex items-center gap-1"><MapPin :size="12" class="text-orange-500" /> {{ event.location }}</p>
-                <p class="flex items-center gap-1"><Clock :size="12" class="text-orange-500" /> {{ formatTime(parseEventDate(event)) }} - {{ formatTime(parseEventEndDate(event)) }}</p>
-                <p class="flex items-center gap-1"><Users2 :size="12" class="text-orange-500" /> {{ event.registered }} / {{ event.capacity }} inscrits</p>
+                <p class="flex items-center gap-1">
+                  <MapPin :size="12" class="text-orange-500 flex-shrink-0" />
+                  <span class="truncate">{{ getLocation(event) }}</span>
+                </p>
+                <p class="flex items-center gap-1">
+                  <Clock :size="12" class="text-orange-500 flex-shrink-0" />
+                  {{ formatDate(event.date) }} - {{ formatTime(event.date) }}
+                  <span v-if="event.end_date"> à {{ formatTime(event.end_date) }}</span>
+                </p>
+                <p class="flex items-center gap-1">
+                  <Users2 :size="12" class="text-orange-500 flex-shrink-0" />
+                  {{ event.registered || 0 }} / {{ event.capacity || 0 }} inscrits
+                </p>
               </div>
-              <p class="text-gray-600 text-xs line-clamp-2 mb-3 leading-relaxed">{{ event.description }}</p>
-              <RouterLink :to="`/evenements/${event.id}`" class="w-full py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg text-xs font-bold hover:shadow-md transition-all duration-300 flex items-center justify-center gap-1">
+
+              <!-- Description -->
+              <p class="text-gray-600 text-xs line-clamp-2 mb-3 leading-relaxed" v-html="event.description"></p>
+
+              <!-- Bouton -->
+              <RouterLink :to="`/evenements/${event.id}`"
+                class="w-full py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg text-xs font-bold hover:shadow-md transition-all duration-300 flex items-center justify-center gap-1">
                 S'inscrire
                 <ArrowRight :size="12" />
               </RouterLink>

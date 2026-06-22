@@ -657,7 +657,7 @@ onMounted(async () => {
         <Footer />
 
         <!-- Success Modal -->
-        <div v-if="showSuccessModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div v-if="showSuccessModal" class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 999;">
             <!-- Backdrop -->
             <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showSuccessModal = false"></div>
 

@@ -218,7 +218,7 @@ const closeRepublishModal = () => {
     isSubmitting.value = false;
 };
 
-// Fonction de republication avec validation
+// Fonction de republication utilisant nodeStore.updateJob()
 const republishJob = async (jobId: number) => {
     // Valider la date
     const selectedDate = new Date(newExpirationDate.value + 'T00:00:00');
@@ -241,19 +241,28 @@ const republishJob = async (jobId: number) => {
     isSubmitting.value = true;
 
     try {
-        // TODO: Implémenter l'appel API pour republier l'offre avec la nouvelle date
-        console.log("Republication de l'offre:", jobId, "avec date d'expiration:", newExpirationDate.value);
+        // Utiliser nodeStore.updateJob() comme dans JobFormView
+        // On prépare le payload avec les champs à mettre à jour
+        const payload = {
+            expires_at: newExpirationDate.value,
+            status: 'pending' // Changer le statut en "en attente de validation"
+        };
 
-        // Simuler un appel API
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Appel à la méthode updateJob du store
+        await nodeStore.updateJob(jobId, payload);
 
-        // Fermer le modal après succès
+        // Fermer le modal
         closeRepublishModal();
-        // Recharger la liste des offres
+
+        // Recharger la liste des offres pour mettre à jour l'affichage
         await loadMyJobs();
+
+        // Rediriger vers la page de détail de l'offre
+        router.push(`/jobs/${jobId}`);
+
     } catch (err) {
         console.error("Erreur lors de la republication:", err);
-        expirationError.value = "Une erreur est survenue lors de la republication";
+        expirationError.value = err instanceof Error ? err.message : "Une erreur est survenue lors de la republication";
     } finally {
         isSubmitting.value = false;
     }
@@ -289,6 +298,7 @@ const formatDate = (dateString: string) => {
 </script>
 
 <template>
+    <!-- Le template reste identique -->
     <div class="flex flex-col min-h-screen bg-gray-50">
         <Header />
 
@@ -602,8 +612,7 @@ const formatDate = (dateString: string) => {
                 <!-- Republish Confirmation Modal -->
                 <div v-if="republishConfirmId"
                     class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
-                    style="z-index: 999;"
-                    @click.self="closeRepublishModal">
+                    style="z-index: 999;" @click.self="closeRepublishModal">
                     <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-in"
                         @click.stop>
                         <!-- En-tête -->
@@ -764,6 +773,7 @@ const formatDate = (dateString: string) => {
                                         class="block text-sm font-medium text-gray-700 mb-2">
                                         <Calendar :size="16" class="inline mr-2 text-blue-500" />
                                         Nouvelle date d'expiration
+                                        <span class="text-red-500 ml-1">*</span>
                                     </label>
                                     <input id="expiration-date-input" v-model="newExpirationDate" type="date" :class="[
                                         'w-full px-4 py-3 bg-gray-50 rounded-xl border focus:ring-2 focus:ring-blue-200 outline-none transition-all text-gray-800 cursor-pointer',
@@ -777,6 +787,18 @@ const formatDate = (dateString: string) => {
                                     </div>
                                     <p class="mt-1 text-xs text-gray-500">La date doit être postérieure à aujourd'hui
                                     </p>
+                                </div>
+
+                                <!-- Informations de republication -->
+                                <div class="bg-blue-50 rounded-xl p-3 border border-blue-100 flex items-start gap-2">
+                                    <RefreshCw :size="16" class="text-blue-600 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p class="text-xs font-semibold text-blue-800">Après republication</p>
+                                        <p class="text-xs text-blue-700">
+                                            L'offre sera à nouveau en attente de validation par un administrateur.
+                                            <!-- Vous serez notifié dès qu'elle sera publiée. -->
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <!-- Actions -->

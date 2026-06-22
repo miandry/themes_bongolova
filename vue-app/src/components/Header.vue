@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import {
   Menu, X, Search, Globe,
   Briefcase, Users, Calendar, LayoutDashboard,
   ChevronDown, Moon, Sun, LogOut, UserCircle2,
+  FilePlus, FileText,
 } from 'lucide-vue-next'
 import { themeAsset } from '@/composables/themeAsset'
 import { storeToRefs } from 'pinia'
@@ -16,10 +17,17 @@ const { isLoggedIn, currentUser, authRole, canAccessProfils } = storeToRefs(auth
 const router = useRouter()
 
 // ── UI state ──────────────────────────────────────────────────────────────────
-const isOpen       = ref(false)
-const scrolled     = ref(false)
-const isDarkMode   = ref(false)
+const isOpen = ref(false)
+const scrolled = ref(false)
+const isDarkMode = ref(false)
 const userMenuOpen = ref(false)
+
+// ── Computed: check if user can access recruiter features ──────────────────
+const canAccessRecruiterMenus = computed(() => {
+  // Utilise la même logique que canAccessProfils ou une logique spécifique
+  // Ici on considère que recruteur et admin peuvent y accéder
+  return authRole.value === 'recruiter' || authRole.value === 'admin'
+})
 
 // ── Scroll detection ──────────────────────────────────────────────────────────
 function onScroll() { scrolled.value = window.scrollY > 20 }
@@ -28,7 +36,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
 
 // ── Nav helpers ───────────────────────────────────────────────────────────────
 const toggleMenu = () => { isOpen.value = !isOpen.value }
-const closeNav   = () => { isOpen.value = false }
+const closeNav = () => { isOpen.value = false }
 
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value
@@ -43,7 +51,7 @@ const initials = () => {
 
 const roleLabel = () => {
   if (authRole.value === 'recruiter') return 'Recruteur'
-  if (authRole.value === 'admin')     return 'Admin'
+  if (authRole.value === 'admin') return 'Admin'
   return 'Candidat'
 }
 
@@ -57,14 +65,12 @@ async function handleLogout() {
 
 <template>
   <!-- ── Desktop header ──────────────────────────────────────────────────── -->
-  <header
-    :class="[
-      'fixed top-0 left-0 right-0 z-[100] transition-all duration-300',
-      scrolled
-        ? 'bg-white/80 backdrop-blur-lg shadow-lg border-b border-gray-100/50 py-2'
-        : 'bg-white/90 backdrop-blur-sm shadow-sm border-b border-gray-100 py-3',
-    ]"
-  >
+  <header :class="[
+    'fixed top-0 left-0 right-0 z-[100] transition-all duration-300',
+    scrolled
+      ? 'bg-white/80 backdrop-blur-lg shadow-lg border-b border-gray-100/50 py-2'
+      : 'bg-white/90 backdrop-blur-sm shadow-sm border-b border-gray-100 py-3',
+  ]">
     <div class="max-w-[1600px] mx-auto px-4 sm:px-6">
       <nav class="flex justify-between items-center gap-4">
 
@@ -75,7 +81,9 @@ async function handleLogout() {
           </div>
           <div class="hidden lg:block">
             <div class="font-black text-gray-900 uppercase leading-tight">
-              <span class="text-lg md:text-xl tracking-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">DIRECTION RÉGIONALE</span>
+              <span
+                class="text-lg md:text-xl tracking-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">DIRECTION
+                RÉGIONALE</span>
               <span class="text-gray-800 font-bold text-sm ml-2">DE LA JEUNESSE ET DES SPORTS</span>
             </div>
             <div class="text-[9px] font-semibold text-gray-500 flex items-center gap-2 mt-0.5">
@@ -86,84 +94,75 @@ async function handleLogout() {
           </div>
           <div class="block md:hidden">
             <div class="font-black text-gray-900 uppercase leading-tight">
-              <span class="text-[10px] tracking-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">DIRECTION RÉGIONALE</span>
+              <span
+                class="text-[10px] tracking-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">DIRECTION
+                RÉGIONALE</span>
             </div>
             <div class="text-[7px] font-bold text-gray-600">de la Jeunesse & Sports</div>
             <div class="text-[5px] text-gray-400 mt-0.5 font-semibold">#1 Bongolava</div>
           </div>
         </RouterLink>
 
-        <!-- Search bar (when scrolled) -->
-        <!-- <div v-if="scrolled" class="hidden lg:flex flex-1 max-w-md">
-          <div class="relative w-full group">
-            <Search :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-green-500 transition" />
-            <input
-              type="text"
-              placeholder="Métier, secteur, mot-clé..."
-              class="w-full pl-9 pr-3 py-1.5 bg-gray-100/80 backdrop-blur-sm border border-gray-200 rounded-full text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-            />
-          </div>
-        </div> -->
-
         <!-- Desktop nav links -->
         <div class="hidden lg:flex items-center gap-1">
-          <RouterLink
-            to="/"
+          <RouterLink to="/"
             class="relative px-3 py-1.5 text-sm font-semibold tracking-wide transition-all duration-200"
             active-class="text-green-600"
-            :class="$route.path === '/' ? 'text-green-600' : 'text-gray-700 hover:text-green-500'"
-          >
+            :class="$route.path === '/' ? 'text-green-600' : 'text-gray-700 hover:text-green-500'">
             Accueil
           </RouterLink>
-          <RouterLink
-            to="/jobs"
+          <RouterLink to="/jobs"
             class="relative px-3 py-1.5 text-sm font-semibold tracking-wide transition-all duration-200"
             active-class="text-green-600"
-            :class="$route.path.startsWith('/jobs') ? 'text-green-600' : 'text-gray-700 hover:text-green-500'"
-          >
+            :class="$route.path === '/jobs' ? 'text-green-600' : 'text-gray-700 hover:text-green-500'">
             Jobs
           </RouterLink>
-          <RouterLink
-            v-if="canAccessProfils"
-            to="/profils"
+
+          <!-- ✅ Utilisation de canAccessRecruiterMenus comme canAccessProfils -->
+          <RouterLink v-if="canAccessRecruiterMenus" to="/jobs/new"
             class="relative px-3 py-1.5 text-sm font-semibold tracking-wide transition-all duration-200"
             active-class="text-green-600"
-            :class="$route.path.startsWith('/profils') ? 'text-green-600' : 'text-gray-700 hover:text-green-500'"
-          >
+            :class="$route.path === '/jobs/new' ? 'text-green-600' : 'text-gray-700 hover:text-green-500'">
+            Créer une offre
+          </RouterLink>
+
+          <RouterLink v-if="canAccessProfils" to="/profils"
+            class="relative px-3 py-1.5 text-sm font-semibold tracking-wide transition-all duration-200"
+            active-class="text-green-600"
+            :class="$route.path.startsWith('/profils') ? 'text-green-600' : 'text-gray-700 hover:text-green-500'">
             Profils
           </RouterLink>
-          <RouterLink
-            to="/evenements"
+          <RouterLink to="/evenements"
             class="relative px-3 py-1.5 text-sm font-semibold tracking-wide transition-all duration-200"
             active-class="text-green-600"
-            :class="$route.path.startsWith('/evenements') ? 'text-green-600' : 'text-gray-700 hover:text-green-500'"
-          >
+            :class="$route.path.startsWith('/evenements') ? 'text-green-600' : 'text-gray-700 hover:text-green-500'">
             Événements
           </RouterLink>
-          <RouterLink
-            to="/contact"
+          <RouterLink v-if="!canAccessRecruiterMenus" to="/contact"
             class="relative px-3 py-1.5 text-sm font-semibold tracking-wide transition-all duration-200"
             active-class="text-green-600"
-            :class="$route.path === '/contact' ? 'text-green-600' : 'text-gray-700 hover:text-green-500'"
-          >
+            :class="$route.path === '/contact' ? 'text-green-600' : 'text-gray-700 hover:text-green-500'">
             Contact
           </RouterLink>
         </div>
 
         <!-- Desktop right actions -->
         <div class="flex items-center gap-2">
-          <button @click="toggleDarkMode" class="hidden md:flex p-2 text-gray-600 hover:text-green-600 hover:bg-gray-100 rounded-full transition">
+          <button @click="toggleDarkMode"
+            class="hidden md:flex p-2 text-gray-600 hover:text-green-600 hover:bg-gray-100 rounded-full transition">
             <Moon v-if="!isDarkMode" :size="18" />
             <Sun v-else :size="18" />
           </button>
 
           <!-- Logged-out -->
           <template v-if="!isLoggedIn">
-            <RouterLink to="/login" class="hidden sm:block text-sm font-semibold text-gray-600 hover:text-green-600 px-2 py-1 transition">
+            <RouterLink to="/login"
+              class="hidden sm:block text-sm font-semibold text-gray-600 hover:text-green-600 px-2 py-1 transition">
               Connexion
             </RouterLink>
             <RouterLink to="/register">
-              <button class="bg-gradient-to-r from-green-500 to-green-700 text-white px-4 py-1.5 rounded-full font-semibold text-xs shadow-md hover:shadow-lg transition">
+              <button
+                class="bg-gradient-to-r from-green-500 to-green-700 text-white px-4 py-1.5 rounded-full font-semibold text-xs shadow-md hover:shadow-lg transition">
                 Inscription
               </button>
             </RouterLink>
@@ -171,47 +170,51 @@ async function handleLogout() {
 
           <!-- Logged-in: avatar + dropdown -->
           <div v-else class="relative">
-            <button
-              type="button"
+            <button type="button"
               class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:border-green-400 hover:shadow-sm transition-all"
-              @click="userMenuOpen = !userMenuOpen"
-            >
-              <span class="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">
+              @click="userMenuOpen = !userMenuOpen">
+              <span
+                class="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">
                 {{ initials() }}
               </span>
               <span class="hidden sm:block text-sm font-semibold text-gray-700 max-w-[120px] truncate">
                 {{ currentUser?.name }}
               </span>
-              <ChevronDown :size="14" class="text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': userMenuOpen }" />
+              <ChevronDown :size="14" class="text-gray-400 transition-transform duration-200"
+                :class="{ 'rotate-180': userMenuOpen }" />
             </button>
 
             <!-- Dropdown card -->
             <Transition name="dropdown">
-              <div
-                v-if="userMenuOpen"
+              <div v-if="userMenuOpen"
                 class="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-[200]"
-                @click.stop
-              >
+                @click.stop>
                 <div class="px-4 py-3 border-b border-gray-100">
                   <p class="text-xs font-bold text-gray-900 truncate">{{ currentUser?.name }}</p>
                   <p class="text-[10px] text-gray-400 truncate mt-0.5">{{ currentUser?.email }}</p>
-                  <span class="mt-1.5 inline-block text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                  <span
+                    class="mt-1.5 inline-block text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-50 text-green-600">
                     {{ roleLabel() }}
                   </span>
                 </div>
-                <RouterLink
-                  to="/mon-profil"
+
+                <!-- ✅ Utilisation de canAccessRecruiterMenus comme canAccessProfils -->
+                <RouterLink v-if="canAccessRecruiterMenus" to="/my-jobs"
                   class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
-                  @click="userMenuOpen = false"
-                >
+                  @click="userMenuOpen = false">
+                  <FileText :size="15" class="text-blue-500" />
+                  Mes offres d'emploi
+                </RouterLink>
+
+                <RouterLink to="/mon-profil"
+                  class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+                  @click="userMenuOpen = false">
                   <UserCircle2 :size="15" class="text-blue-500" />
                   Mon profil
                 </RouterLink>
-                <button
-                  type="button"
+                <button type="button"
                   class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition"
-                  @click="handleLogout"
-                >
+                  @click="handleLogout">
                   <LogOut :size="15" />
                   Déconnexion
                 </button>
@@ -223,13 +226,12 @@ async function handleLogout() {
           </div>
 
           <!-- Mobile burger -->
-          <button
-            @click="toggleMenu"
-            class="lg:hidden relative w-9 h-9 rounded-full bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
-          >
+          <button @click="toggleMenu"
+            class="lg:hidden relative w-9 h-9 rounded-full bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center">
             <Menu v-if="!isOpen" :size="18" />
             <X v-else :size="18" />
-            <span v-if="!isOpen" class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-500 rounded-full animate-pulse shadow-md" />
+            <span v-if="!isOpen"
+              class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-500 rounded-full animate-pulse shadow-md" />
           </button>
         </div>
       </nav>
@@ -243,10 +245,8 @@ async function handleLogout() {
 
   <!-- ── Mobile sidebar ──────────────────────────────────────────────────── -->
   <Transition name="slide">
-    <div
-      v-if="isOpen"
-      class="fixed top-0 right-0 h-full w-[85%] max-w-[360px] bg-white/95 backdrop-blur-xl shadow-2xl z-[110] lg:hidden overflow-y-auto"
-    >
+    <div v-if="isOpen"
+      class="fixed top-0 right-0 h-full w-[85%] max-w-[360px] bg-white/95 backdrop-blur-xl shadow-2xl z-[110] lg:hidden overflow-y-auto">
       <div class="flex flex-col h-full pt-6 pb-6 px-5">
 
         <!-- Sidebar header -->
@@ -269,49 +269,42 @@ async function handleLogout() {
 
         <!-- Nav links -->
         <nav class="space-y-1 flex-1">
-          <RouterLink
-            to="/"
-            @click="closeNav"
+          <RouterLink to="/" @click="closeNav"
             class="flex items-center gap-3 p-3 rounded-xl font-semibold text-sm transition-all duration-200"
-            :class="$route.path === '/' ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'"
-          >
+            :class="$route.path === '/' ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'">
             <LayoutDashboard :size="18" />
             Accueil
           </RouterLink>
-          <RouterLink
-            to="/jobs"
-            @click="closeNav"
+          <RouterLink to="/jobs" @click="closeNav"
             class="flex items-center gap-3 p-3 rounded-xl font-semibold text-sm transition-all duration-200"
-            :class="$route.path.startsWith('/jobs') ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'"
-          >
+            :class="$route.path.startsWith('/jobs') ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'">
             <Briefcase :size="18" />
             Jobs
           </RouterLink>
-          <RouterLink
-            v-if="canAccessProfils"
-            to="/profils"
-            @click="closeNav"
+
+          <!-- ✅ Utilisation de canAccessRecruiterMenus comme canAccessProfils -->
+          <RouterLink v-if="canAccessRecruiterMenus" to="/jobs/new" @click="closeNav"
             class="flex items-center gap-3 p-3 rounded-xl font-semibold text-sm transition-all duration-200"
-            :class="$route.path.startsWith('/profils') ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'"
-          >
+            :class="$route.path === '/jobs/new' ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'">
+            <FilePlus :size="18" />
+            Créer une offre
+          </RouterLink>
+
+          <RouterLink v-if="canAccessProfils" to="/profils" @click="closeNav"
+            class="flex items-center gap-3 p-3 rounded-xl font-semibold text-sm transition-all duration-200"
+            :class="$route.path.startsWith('/profils') ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'">
             <Users :size="18" />
             Profils
           </RouterLink>
-          <RouterLink
-            to="/evenements"
-            @click="closeNav"
+          <RouterLink to="/evenements" @click="closeNav"
             class="flex items-center gap-3 p-3 rounded-xl font-semibold text-sm transition-all duration-200"
-            :class="$route.path.startsWith('/evenements') ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'"
-          >
+            :class="$route.path.startsWith('/evenements') ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'">
             <Calendar :size="18" />
             Événements
           </RouterLink>
-          <RouterLink
-            to="/contact"
-            @click="closeNav"
+          <RouterLink to="/contact" @click="closeNav"
             class="flex items-center gap-3 p-3 rounded-xl font-semibold text-sm transition-all duration-200"
-            :class="$route.path === '/contact' ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'"
-          >
+            :class="$route.path === '/contact' ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'">
             <Globe :size="18" />
             Contact
           </RouterLink>
@@ -322,12 +315,14 @@ async function handleLogout() {
         <!-- Logged-out -->
         <div v-if="!isLoggedIn" class="pt-6 space-y-2 border-t border-gray-200 mt-4">
           <RouterLink to="/login" @click="closeNav" class="block">
-            <button class="w-full py-2.5 border border-green-600 text-green-600 rounded-xl font-semibold text-sm hover:bg-green-50 transition">
+            <button
+              class="w-full py-2.5 border border-green-600 text-green-600 rounded-xl font-semibold text-sm hover:bg-green-50 transition">
               Connexion
             </button>
           </RouterLink>
           <RouterLink to="/register" @click="closeNav" class="block">
-            <button class="w-full py-2.5 bg-gradient-to-r from-green-600 to-blue-500 text-white rounded-xl font-semibold text-sm shadow-md">
+            <button
+              class="w-full py-2.5 bg-gradient-to-r from-green-600 to-blue-500 text-white rounded-xl font-semibold text-sm shadow-md">
               S'inscrire gratuitement
             </button>
           </RouterLink>
@@ -337,32 +332,35 @@ async function handleLogout() {
         <div v-else class="pt-4 space-y-2 border-t border-gray-200 mt-4">
           <!-- User card -->
           <div class="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl mb-1">
-            <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-blue-500 text-white text-sm font-black flex items-center justify-center flex-shrink-0">
+            <span
+              class="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-blue-500 text-white text-sm font-black flex items-center justify-center flex-shrink-0">
               {{ initials() }}
             </span>
             <div class="min-w-0">
               <p class="text-sm font-bold text-gray-900 truncate">{{ currentUser?.name }}</p>
               <p class="text-[10px] text-gray-400 truncate">{{ currentUser?.email }}</p>
-              <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
+              <span
+                class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
                 {{ roleLabel() }}
               </span>
             </div>
           </div>
-          <!-- Profile -->
-          <RouterLink
-            to="/mon-profil"
-            @click="closeNav"
-            class="flex items-center gap-3 w-full p-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition"
-          >
+
+          <!-- ✅ Utilisation de canAccessRecruiterMenus comme canAccessProfils -->
+          <RouterLink v-if="canAccessRecruiterMenus" to="/my-jobs" @click="closeNav"
+            class="flex items-center gap-3 w-full p-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition">
+            <FileText :size="16" class="text-blue-500" />
+            Mes offres d'emploi
+          </RouterLink>
+
+          <RouterLink to="/mon-profil" @click="closeNav"
+            class="flex items-center gap-3 w-full p-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition">
             <UserCircle2 :size="16" class="text-blue-500" />
             Mon profil
           </RouterLink>
-          <!-- Logout -->
-          <button
-            type="button"
+          <button type="button"
             class="flex items-center gap-3 w-full p-3 rounded-xl border border-red-200 text-red-500 font-semibold text-sm hover:bg-red-50 transition"
-            @click="handleLogout"
-          >
+            @click="handleLogout">
             <LogOut :size="16" />
             Déconnexion
           </button>
@@ -376,19 +374,35 @@ async function handleLogout() {
 <style scoped>
 /* Dropdown */
 .dropdown-enter-active,
-.dropdown-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.dropdown-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
 .dropdown-enter-from,
-.dropdown-leave-to { opacity: 0; transform: translateY(-6px) scale(0.97); }
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.97);
+}
 
 /* Mobile overlay fade */
 .fade-enter-active,
-.fade-leave-active { transition: opacity 0.25s ease; }
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
 .fade-enter-from,
-.fade-leave-to { opacity: 0; }
+.fade-leave-to {
+  opacity: 0;
+}
 
 /* Mobile sidebar slide */
 .slide-enter-active,
-.slide-leave-active { transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
+.slide-leave-active {
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .slide-enter-from,
-.slide-leave-to { transform: translateX(100%); }
+.slide-leave-to {
+  transform: translateX(100%);
+}
 </style>

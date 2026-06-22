@@ -54,3 +54,11 @@ export function displayText(value: unknown, fallback = '—'): string {
   }
   return String(value)
 }
+
+// Fonction pour séparer les données par saut de ligne
+export function splitByNewline(data: string | null | undefined): string[] {
+  if (!data) return []
+  return data.split('\n')
+    .map(item => item.trim())
+    .filter(item => item.length > 0)
+}
