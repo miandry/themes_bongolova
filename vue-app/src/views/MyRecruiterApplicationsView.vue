@@ -179,7 +179,7 @@ onMounted(async () => {
                   <th class="px-5 py-3 font-semibold">Offre</th>
                   <th class="px-5 py-3 font-semibold">Date</th>
                   <th class="px-5 py-3 font-semibold">Statut</th>
-                  <th class="px-5 py-3 font-semibold text-right">Actions</th>
+                  <th class="px-5 py-3 font-semibold text-right min-w-[150px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,7 +204,7 @@ onMounted(async () => {
                       <option value="rejected">Refusée</option>
                     </select>
                   </td>
-                  <td class="px-5 py-4 text-right">
+                  <td class="px-5 py-4 text-right min-w-[150px]">
                     <RouterLink v-if="a.profil_candidat_id" :to="`/profils/${a.profil_candidat_id}`"
                       class="inline-flex items-center px-2 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition">
                       <Eye :size="16" class="mr-1" />
