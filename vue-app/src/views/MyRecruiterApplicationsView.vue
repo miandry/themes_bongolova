@@ -206,7 +206,7 @@ onMounted(async () => {
                   </td>
                   <td class="px-5 py-4 text-right">
                     <RouterLink v-if="a.profil_candidat_id" :to="`/profils/${a.profil_candidat_id}`"
-                      class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition">
+                      class="inline-flex items-center gap-1 px-2 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition">
                       <Eye :size="16" />
                       Voir profil
                     </RouterLink>
