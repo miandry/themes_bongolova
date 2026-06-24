@@ -283,7 +283,7 @@ function closeSuccessModal() {
           class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none resize-y focus:ring-2 focus:ring-purple-300 focus:border-purple-400" />
       </div>
 
-      <div>
+      <div class="hidden">
         <label class="block text-xs font-semibold text-gray-600 mb-1.5" for="apply-cv">
           CV (PDF, optionnel)
         </label>
