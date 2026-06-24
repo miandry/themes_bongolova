@@ -9,10 +9,13 @@ import JobsView from './views/JobsView.vue'
 import JobDetailView from './views/JobDetailView.vue'
 import JobFormView from './views/JobFormView.vue'
 import MyJobsView from './views/MyJobsView.vue'
+import MyRecruiterApplicationsView from './views/MyRecruiterApplicationsView.vue'
 import ProfilsView from './views/ProfilsView.vue'
 import ProfilDetailView from './views/ProfilDetailView.vue'
 import EventsView from './views/EventsView.vue'
+import MyEventsView from './views/MyEventsView.vue'
 import EventDetailView from './views/EventDetailView.vue'
+import EventFormView from './views/EventFormView.vue'
 import ContactView from './views/ContactView.vue'
 import FAQView from './views/FAQView.vue'
 import MentionsLegalesView from './views/MentionsLegalesView.vue'
@@ -59,9 +62,13 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/jobs/:id', component: JobDetailView },
   { path: '/jobs/:id/edit', component: JobFormView, meta: { requiresAuth: true, requiresRecruiter: true } },
   { path: '/my-jobs', component: MyJobsView, meta: { requiresAuth: true, requiresRecruiter: true } },
+  { path: '/mes-candidatures', component: MyRecruiterApplicationsView, meta: { requiresAuth: true, requiresRecruiter: true } },
   { path: '/profils', component: ProfilsView, meta: { requiresAuth: true, requiresProfils: true } },
   { path: '/profils/:id', component: ProfilDetailView, meta: { requiresAuth: true, requiresProfils: true } },
   { path: '/evenements', component: EventsView },
+  { path: '/mes-evenements', component: MyEventsView, meta: { requiresAuth: true, requiresRecruiter: true }  },
+  { path: '/evenements/nouveau', component: EventFormView, meta: { requiresAuth: true, requiresRecruiter: true } },
+  { path: '/evenements/:id/edit', component: EventFormView, meta: { requiresAuth: true, requiresRecruiter: true } },
   { path: '/evenements/:id', component: EventDetailView },
   { path: '/contact', component: ContactView },
   { path: '/faq', component: FAQView },

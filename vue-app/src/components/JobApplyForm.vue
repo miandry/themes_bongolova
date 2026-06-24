@@ -30,6 +30,7 @@ const route = useRoute()
 const applying = ref(false)
 const applySuccess = ref(false)
 const applyError = ref('')
+const successModalOpen = ref(false)
 const showForm = ref(props.variant !== 'sidebar')
 
 const form = ref({
@@ -124,6 +125,7 @@ async function submit() {
   try {
     await nodeStore.applyToJob(props.jobId, fd)
     applySuccess.value = true
+    successModalOpen.value = true
     emit('success')
   } catch (e) {
     applyError.value = e instanceof Error ? e.message : 'Erreur lors de la candidature.'
@@ -131,40 +133,73 @@ async function submit() {
     applying.value = false
   }
 }
+
+function closeSuccessModal() {
+  successModalOpen.value = false
+}
 </script>
 
 <template>
-  <!-- Sidebar CTA - Caché pour les recruteurs et admins -->
-  <div v-if="variant === 'sidebar' && shouldShowApplyContent" class="mt-6 pt-4 border-t border-gray-100">
-    <div v-if="applySuccess"
-      class="w-full py-4 bg-green-50 border border-green-200 text-green-700 rounded-xl font-bold text-center flex items-center justify-center gap-2 text-sm">
-      <CheckCircle2 :size="18" /> Candidature envoyée !
+  <div>
+    <!-- Success modal -->
+    <div v-if="successModalOpen" class="fixed inset-0 z-[200]">
+      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeSuccessModal" />
+      <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" @click.stop>
+          <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle2 :size="28" class="text-green-600" />
+          </div>
+          <h3 class="text-lg font-black text-gray-900">Candidature envoyée</h3>
+          <p class="text-sm text-gray-600 mt-1">
+            Votre candidature a été envoyée avec succès. Le recruteur la consultera bientôt.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-2 mt-5">
+            <RouterLink to="/mon-profil"
+              class="flex-1 inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition"
+              @click="closeSuccessModal">
+              Voir mes candidatures
+            </RouterLink>
+            <button type="button"
+              class="flex-1 px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition"
+              @click="closeSuccessModal">
+              Fermer
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-    <template v-else>
-      <button type="button"
-        class="w-full py-4 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-2xl transition-all hover:scale-[1.02] flex items-center justify-center gap-3"
-        @click="scrollToForm">
-        <Send :size="20" /> Postuler
-      </button>
-      <p v-if="needsLogin" class="text-center text-xs text-gray-400 mt-2">
-        <RouterLink to="/login" class="text-blue-600 hover:underline">Connectez-vous</RouterLink>
-        pour postuler
-      </p>
-      <p v-else-if="wrongRole" class="text-center text-xs text-amber-600 mt-2">
-        Compte recruteur — utilisez un compte candidat
-      </p>
-      <p v-else class="text-center text-xs text-gray-400 mt-2">Remplissez le formulaire ci-dessous</p>
-    </template>
-  </div>
 
-  <!-- Full application form - Caché pour les recruteurs et admins -->
-  <section v-else-if="variant !== 'sidebar' && shouldShowApplyContent" id="postuler"
-    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-28">
-    <h2 class="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-      <Send :size="22" class="text-purple-600" />
-      Postuler à cette offre
-    </h2>
-    <p v-if="jobTitle" class="text-gray-500 text-sm mb-6">{{ jobTitle }}</p>
+    <!-- Sidebar CTA - Caché pour les recruteurs et admins -->
+    <div v-if="variant === 'sidebar' && shouldShowApplyContent" class="mt-6 pt-4 border-t border-gray-100">
+      <div v-if="applySuccess"
+        class="w-full py-4 bg-green-50 border border-green-200 text-green-700 rounded-xl font-bold text-center flex items-center justify-center gap-2 text-sm">
+        <CheckCircle2 :size="18" /> Candidature envoyée !
+      </div>
+      <template v-else>
+        <button type="button"
+          class="w-full py-4 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-2xl transition-all hover:scale-[1.02] flex items-center justify-center gap-3"
+          @click="scrollToForm">
+          <Send :size="20" /> Postuler
+        </button>
+        <p v-if="needsLogin" class="text-center text-xs text-gray-400 mt-2">
+          <RouterLink to="/login" class="text-blue-600 hover:underline">Connectez-vous</RouterLink>
+          pour postuler
+        </p>
+        <p v-else-if="wrongRole" class="text-center text-xs text-amber-600 mt-2">
+          Compte recruteur — utilisez un compte candidat
+        </p>
+        <p v-else class="text-center text-xs text-gray-400 mt-2">Remplissez le formulaire ci-dessous</p>
+      </template>
+    </div>
+
+    <!-- Full application form - Caché pour les recruteurs et admins -->
+    <section v-else-if="variant !== 'sidebar' && shouldShowApplyContent" id="postuler"
+      class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-28">
+      <h2 class="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+        <Send :size="22" class="text-purple-600" />
+        Postuler à cette offre
+      </h2>
+      <p v-if="jobTitle" class="text-gray-500 text-sm mb-6">{{ jobTitle }}</p>
 
     <div v-if="applySuccess" class="py-8 text-center">
       <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -273,5 +308,6 @@ async function submit() {
         {{ applying ? 'Envoi en cours…' : 'Envoyer ma candidature' }}
       </button>
     </form>
-  </section>
+    </section>
+  </div>
 </template>

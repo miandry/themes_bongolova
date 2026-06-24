@@ -51,6 +51,11 @@ export const useNodeStore = defineStore('node', () => {
   const eventsError = ref<string | null>(null)
   const eventError = ref<string | null>(null)
 
+  const eventsTotal = ref(0)
+  const eventsCurrentPage = ref(1)
+  const eventsLastPage = ref(1)
+  const eventsPerPage = ref(9)
+
   // ── Contact ───────────────────────────────────────────────────────────────
   const contactLoading = ref(false)
   const contactError = ref<string | null>(null)
@@ -254,11 +259,75 @@ export const useNodeStore = defineStore('node', () => {
     eventsError.value = null
     try {
       const path = API_ROUTES.events + toQueryString({
-        search: filters.search,
+        search: filters.search ?? filters.keyword,
         type: filters.type,
+        location: filters.location,
+        status: filters.status,
+        per_page: filters.per_page,
+        page: filters.page,
       })
-      const data = await apiGet<Event[]>(path)
-      events.value = normalizeList(data)
+      const data = await apiGet<Event[] | PaginatedResponse<Event>>(path)
+      const { items, meta } = normalizePaginatedList(data)
+      events.value = items
+      if (meta) {
+        eventsTotal.value = meta.total
+        eventsCurrentPage.value = meta.current_page
+        eventsLastPage.value = meta.last_page
+        eventsPerPage.value = meta.per_page
+      }
+      else {
+        eventsTotal.value = items.length
+        eventsCurrentPage.value = 1
+        eventsLastPage.value = 1
+        eventsPerPage.value = items.length
+      }
+      listCache.set(key, { data: events.value, fetchedAt: Date.now() })
+      return events.value
+    }
+    catch (e) {
+      eventsError.value = e instanceof Error ? e.message : 'Impossible de charger les événements.'
+      events.value = []
+      throw e
+    }
+    finally {
+      eventsLoading.value = false
+    }
+  }
+
+  async function fetchMyEvents(filters: EventSearchFilters = {}, useCache = true) {
+    const key = cacheKey('event-my', toQueryString(filters as Record<string, string>))
+    const cached = listCache.get(key) as CacheEntry<Event[]> | undefined
+    if (useCache && isCacheValid(cached)) {
+      events.value = cached!.data
+      return events.value
+    }
+
+    eventsLoading.value = true
+    eventsError.value = null
+    try {
+      const path = API_ROUTES.myEvents + toQueryString({
+        search: filters.search ?? filters.keyword,
+        type: filters.type,
+        location: filters.location,
+        status: filters.status,
+        per_page: filters.per_page,
+        page: filters.page,
+      })
+      const data = await apiGet<Event[] | PaginatedResponse<Event>>(path)
+      const { items, meta } = normalizePaginatedList(data)
+      events.value = items
+      if (meta) {
+        eventsTotal.value = meta.total
+        eventsCurrentPage.value = meta.current_page
+        eventsLastPage.value = meta.last_page
+        eventsPerPage.value = meta.per_page
+      }
+      else {
+        eventsTotal.value = items.length
+        eventsCurrentPage.value = 1
+        eventsLastPage.value = 1
+        eventsPerPage.value = items.length
+      }
       listCache.set(key, { data: events.value, fetchedAt: Date.now() })
       return events.value
     }
@@ -305,6 +374,10 @@ export const useNodeStore = defineStore('node', () => {
 
   async function searchEvents(filters: EventSearchFilters) {
     return fetchEvents(filters, false)
+  }
+
+  async function searchMyEvents(filters: EventSearchFilters) {
+    return fetchMyEvents(filters, false)
   }
 
   async function registerEvent(
@@ -450,6 +523,10 @@ export const useNodeStore = defineStore('node', () => {
     eventLoading,
     eventsError,
     eventError,
+    eventsTotal,
+    eventsCurrentPage,
+    eventsLastPage,
+    eventsPerPage,
     contactLoading,
     contactError,
     contactSuccess,
@@ -465,8 +542,10 @@ export const useNodeStore = defineStore('node', () => {
     removeJob,
     applyToJob,
     fetchEvents,
+    fetchMyEvents,
     fetchEventById,
     searchEvents,
+    searchMyEvents,
     registerEvent,
     createEvent,
     updateEvent,

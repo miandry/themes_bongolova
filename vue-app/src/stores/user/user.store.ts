@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Candidate, Application } from '@/types/entities'
+import type { Candidate, Application, RecruiterApplicationSearchFilters } from '@/types/entities'
 import type { CandidateSearchFilters, PaginatedResponse } from '@/types/entities'
 import { API_ROUTES } from '@/services/api-urls'
 import {
@@ -42,6 +42,14 @@ export const useUserStore = defineStore('user', () => {
   // ── Applications ────────────────────────────────────────────────────────
   const applications = ref<Application[]>([])
   const applicationsLoading = ref(false)
+
+  // ── Recruiter applications ───────────────────────────────────────────────
+  const recruiterApplications = ref<Application[]>([])
+  const recruiterApplicationsLoading = ref(false)
+  const recruiterApplicationsTotal = ref(0)
+  const recruiterApplicationsCurrentPage = ref(1)
+  const recruiterApplicationsLastPage = ref(1)
+  const recruiterApplicationsPerPage = ref(20)
 
   // ── Saved jobs / profiles (local UI state + API saved jobs) ─────────────
   const savedJobIds = ref<number[]>([])
@@ -204,6 +212,50 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  async function fetchRecruiterApplications(filters: RecruiterApplicationSearchFilters = {}) {
+    if (!isRecruiter.value) return []
+    recruiterApplicationsLoading.value = true
+    try {
+      const path = API_ROUTES.recruiterApplications + toQueryString({
+        keyword: filters.keyword,
+        status: filters.status,
+        job_title: filters.job_title,
+        per_page: filters.per_page ?? recruiterApplicationsPerPage.value,
+        page: filters.page ?? recruiterApplicationsCurrentPage.value,
+      })
+      const data = await apiGet<Application[] | PaginatedResponse<Application>>(path)
+      const { items, meta } = normalizePaginatedList(data)
+      recruiterApplications.value = items
+      if (meta) {
+        recruiterApplicationsTotal.value = meta.total
+        recruiterApplicationsCurrentPage.value = meta.current_page
+        recruiterApplicationsLastPage.value = meta.last_page
+        recruiterApplicationsPerPage.value = meta.per_page
+      } else {
+        recruiterApplicationsTotal.value = items.length
+        recruiterApplicationsCurrentPage.value = 1
+        recruiterApplicationsLastPage.value = 1
+        recruiterApplicationsPerPage.value = items.length
+      }
+      return recruiterApplications.value
+    } catch {
+      recruiterApplications.value = []
+      recruiterApplicationsTotal.value = 0
+      return []
+    } finally {
+      recruiterApplicationsLoading.value = false
+    }
+  }
+
+  async function updateRecruiterApplicationStatus(id: number | string, status: string) {
+    if (!isRecruiter.value) throw new Error('Accès refusé.')
+    const updated = await apiPut<Application>(API_ROUTES.recruiterApplication(id), { status })
+    recruiterApplications.value = recruiterApplications.value.map((a) =>
+      a.id === Number(id) ? { ...a, ...updated } : a,
+    )
+    return updated
+  }
+
   // ── Candidates directory ──────────────────────────────────────────────────
   async function fetchCandidates(filters: CandidateSearchFilters = {}, useCache = true) {
     const key = toQueryString(filters as Record<string, string>)
@@ -349,6 +401,12 @@ export const useUserStore = defineStore('user', () => {
     candidatesPerPage,
     applications,
     applicationsLoading,
+    recruiterApplications,
+    recruiterApplicationsLoading,
+    recruiterApplicationsTotal,
+    recruiterApplicationsCurrentPage,
+    recruiterApplicationsLastPage,
+    recruiterApplicationsPerPage,
     savedJobIds,
     savedProfileIds,
     savedJobsLoading,
@@ -366,6 +424,8 @@ export const useUserStore = defineStore('user', () => {
     deleteCv,
     uploadLogo,
     fetchMyApplications,
+    fetchRecruiterApplications,
+    updateRecruiterApplicationStatus,
     fetchCandidates,
     fetchCandidateById,
     searchCandidates,

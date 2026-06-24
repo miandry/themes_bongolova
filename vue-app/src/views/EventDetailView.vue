@@ -43,16 +43,6 @@ const formatDate = (dateString: string) => {
     : 'Date non spécifiée'
 }
 
-const formatTime = (dateString: string) => {
-  const date = parseDate(dateString)
-  return date
-    ? date.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-    : '—'
-}
-
 const startDate = computed(() => event.value?.date ? parseDate(event.value.date) : null)
 const endDate = computed(() => event.value?.end_date ? parseDate(event.value.end_date) : null)
 
@@ -222,8 +212,7 @@ onMounted(load)
                       <Calendar :size="14" /> {{ formatDate(event.date) }}
                     </span>
                     <span v-if="startDate" class="flex items-center gap-1">
-                      <Clock :size="14" /> {{ formatTime(event.date) }}
-                      <template v-if="endDate"> - {{ formatTime(event.end_date) }}</template>
+                      <Clock :size="14" /> {{ event.horaires }}
                     </span>
                     <span class="flex items-center gap-1">
                       <MapPin :size="14" /> {{ getLocation(event) }}

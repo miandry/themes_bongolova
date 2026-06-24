@@ -44,6 +44,7 @@ export interface Event {
   long_description?: string
   location?: string
   date?: string
+  horaires?: string
   time?: string
   end_date?: string
   end_time?: string
@@ -55,6 +56,8 @@ export interface Event {
   contact_email?: string
   contact_phone?: string
   address?: string
+  status?: string
+  owner_id?: number
   [key: string]: unknown
 }
 
@@ -72,11 +75,27 @@ export interface Candidate {
 
 export interface Application {
   id: number
+  job_id?: number
   job_title?: string
-  company_name?: string
-  applied_at?: string
+  job_location?: string
+  candidate_id?: number
+  profil_candidat_id?: number
+  name?: string
+  email?: string
+  phone?: string | null
+  cover_letter?: string | null
+  cv_file?: string | null
   status?: string
+  created_at?: string
   [key: string]: unknown
+}
+
+export interface RecruiterApplicationSearchFilters {
+  keyword?: string
+  status?: string
+  job_title?: string
+  per_page?: number
+  page?: number
 }
 
 export interface ApiListResponse<T> {
@@ -117,5 +136,10 @@ export interface PaginatedResponse<T> {
 
 export interface EventSearchFilters {
   search?: string
+  keyword?: string
   type?: string
+  location?: string
+  status?: string
+  per_page?: number
+  page?: number
 }

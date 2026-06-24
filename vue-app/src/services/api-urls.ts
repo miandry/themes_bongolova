@@ -24,6 +24,7 @@ export const API_ROUTES = {
 
   // Events
   events: `${PREFIX}/events`,
+  myEvents: `${PREFIX}/my-events`,
   event: (id: number | string) => `${PREFIX}/events/${id}`,
   eventRegister: (id: number | string) => `${PREFIX}/events/${id}/register`,
 
@@ -39,6 +40,8 @@ export const API_ROUTES = {
   // Recruiters
   myRecruiterProfile: `${PREFIX}/my-recruiter-profile`,
   recruiterUploadLogo: `${PREFIX}/recruiter/upload-logo`,
+  recruiterApplications: `${PREFIX}/recruiter/applications`,
+  recruiterApplication: (id: number | string) => `${PREFIX}/recruiter/applications/${id}`,
 
   // Saved jobs
   savedJobs: `${PREFIX}/candidate/saved-jobs`,
