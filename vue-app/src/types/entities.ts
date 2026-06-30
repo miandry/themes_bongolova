@@ -1,7 +1,7 @@
 /** Content entity types exposed by bongolava_job API. */
 export type ContentType = 'job' | 'event' | 'contact'
 
-export type UserRole = 'candidate' | 'recruiter' | 'admin'
+export type UserRole = 'candidate' | 'recruiter' | 'partenaire' | 'admin'
 
 export interface AuthUser {
   id: number
@@ -27,13 +27,16 @@ export interface Job {
   remote?: boolean
   status?: string
   created_at?: string
-  requirements?: unknown
-  responsibilities?: unknown
-  tags?: unknown
+  expires_at?: string
+  requirements?: string
+  responsibilities?: string
+  tags?: string
   contact_email?: string
   contact_phone?: string
   recruiter?: Record<string, string>
   recruiter_id?: number
+  image_url?: string | null
+  user_type?: 'partenaire' | 'recruiter' | string
   [key: string]: unknown
 }
 

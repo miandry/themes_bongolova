@@ -58,8 +58,11 @@ const successMessage = ref('')
 const errorMessage = ref('')
 const showSuccessModal = ref(false)
 
+const imageFile = ref<File | null>(null)
+const imagePreviewUrl = ref<string | null>(null)
+
 // Computed properties
-const isRecruiterOrAdmin = computed(() => authRole.value === 'recruiter' || authRole.value === 'admin')
+const isRecruiterOrAdmin = computed(() => authRole.value === 'recruiter' || authRole.value === 'partenaire' || authRole.value === 'admin')
 
 const pageTitle = computed(() => isEditing.value ? 'Modifier l\'offre d\'emploi' : 'Créer une nouvelle offre d\'emploi')
 
@@ -144,7 +147,45 @@ function validateForm(): boolean {
         formErrors.value.expires_at = ['La date d\'expiration doit être dans le futur.']
     }
 
+    // Image (optionnelle)
+    if (imageFile.value) {
+        const maxBytes = 5 * 1024 * 1024
+        if (imageFile.value.size > maxBytes) {
+            formErrors.value.image = ['L\'image doit être inférieure à 5 Mo.']
+        }
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+        if (!allowed.includes(imageFile.value.type)) {
+            formErrors.value.image = ['Format invalide. Formats acceptés: JPG, PNG, WEBP, GIF.']
+        }
+    }
+
     return Object.keys(formErrors.value).length === 0
+}
+
+function onImageChange(e: Event) {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0] ?? null
+    if (!file) {
+        imageFile.value = null
+        if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
+        imagePreviewUrl.value = null
+        delete formErrors.value.image
+        return
+    }
+
+    if (input.files && input.files.length > 1) {
+        input.value = ''
+        imageFile.value = null
+        if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
+        imagePreviewUrl.value = null
+        formErrors.value.image = ['Veuillez sélectionner une seule image.']
+        return
+    }
+
+    imageFile.value = file
+    if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
+    imagePreviewUrl.value = URL.createObjectURL(file)
+    validateForm()
 }
 
 // Fonction pour valider le salaire en temps réel
@@ -317,7 +358,17 @@ async function submitForm() {
                 router.push('/my-jobs')
             }, 1500)
         } else {
-            await nodeStore.createJob(payload)
+            if (imageFile.value) {
+                const fd = new FormData()
+                for (const [k, v] of Object.entries(payload)) {
+                    if (v === undefined || v === null) continue
+                    fd.append(k, String(v))
+                }
+                fd.append('image', imageFile.value)
+                await nodeStore.createJobForm(fd)
+            } else {
+                await nodeStore.createJob(payload)
+            }
             successMessage.value = 'Offre d\'emploi créée avec succès !'
             // Afficher le modal de succès au lieu de rediriger automatiquement
             showSuccessModal.value = true
@@ -350,6 +401,9 @@ function resetForm() {
     formErrors.value = {}
     successMessage.value = ''
     errorMessage.value = ''
+    imageFile.value = null
+    if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
+    imagePreviewUrl.value = null
 }
 
 function goToMyJobs() {
@@ -549,6 +603,25 @@ onMounted(async () => {
                                     </select>
                                 </div>
 
+                            </div>
+
+                            <!-- Image -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Image de l'offre
+                                </label>
+                                <input type="file" accept="image/*" @change="onImageChange"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                                <div v-if="formErrors.image" class="mt-1 flex items-start gap-2">
+                                    <AlertCircle :size="16" class="text-red-500 mt-0.5 flex-shrink-0" />
+                                    <p class="text-sm text-red-600">{{ formErrors.image[0] }}</p>
+                                </div>
+                                <div v-if="imagePreviewUrl" class="mt-3">
+                                    <p class="text-xs text-gray-500 mb-2">Aperçu</p>
+                                    <img :src="imagePreviewUrl" alt="Aperçu image"
+                                        class="w-full max-w-md rounded-xl border border-gray-200 object-cover" />
+                                </div>
+                                <p class="mt-1 text-xs text-gray-500">Formats: JPG, PNG, WEBP, GIF. Taille max: 5 Mo.</p>
                             </div>
 
                             <!-- Requirements -->

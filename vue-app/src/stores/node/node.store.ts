@@ -193,6 +193,23 @@ export const useNodeStore = defineStore('node', () => {
     }
   }
 
+  async function createJobForm(fd: FormData) {
+    jobsLoading.value = true
+    jobsError.value = null
+    try {
+      const created = await apiPostForm<Job>(API_ROUTES.jobs, fd)
+      listCache.clear()
+      return created
+    }
+    catch (e) {
+      jobsError.value = e instanceof Error ? e.message : 'Erreur création offre.'
+      throw e
+    }
+    finally {
+      jobsLoading.value = false
+    }
+  }
+
   async function updateJob(id: number | string, payload: Partial<Job>) {
     jobLoading.value = true
     jobError.value = null
@@ -538,6 +555,7 @@ export const useNodeStore = defineStore('node', () => {
     fetchJobById,
     searchJobs,
     createJob,
+    createJobForm,
     updateJob,
     removeJob,
     applyToJob,

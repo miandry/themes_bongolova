@@ -51,14 +51,14 @@ const canApply = computed(() => {
 
 const needsLogin = computed(() => !isLoggedIn.value)
 const wrongRole = computed(() => isLoggedIn.value && authRole.value !== 'candidate')
+const isPartner = computed(() => isLoggedIn.value && authRole.value === 'partenaire')
 const isRecruiter = computed(() => isLoggedIn.value && authRole.value === 'recruiter')
 const isAdmin = computed(() => isLoggedIn.value && authRole.value === 'admin')
 
 // Computed pour savoir si on doit afficher le contenu de candidature
 const shouldShowApplyContent = computed(() => {
-  // Si l'utilisateur est un recruteur ou admin, on cache tout
-  if (isRecruiter.value || isAdmin.value) return false
-  // Sinon on affiche (candidat ou non connecté)
+  // Recruteurs, admins et partenaires ne peuvent pas postuler
+  if (isRecruiter.value || isAdmin.value || isPartner.value) return false
   return true
 })
 

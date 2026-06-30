@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { RouterLink } from 'vue-router'
 import { MapPin, Briefcase, Heart, Zap, ArrowRight, Building2 } from 'lucide-vue-next'
 import { useNodeStore } from '@/stores/node/node.store'
+import { themeAsset } from '@/composables/themeAsset'
 
 const nodeStore = useNodeStore()
 const { featuredJobs } = storeToRefs(nodeStore)
@@ -34,6 +35,8 @@ const formatSalary = (job: { salary?: string }) => job.salary
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <div v-for="job in featuredJobs" :key="job.id" class="group relative bg-white/70 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
           <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"></div>
+          <img :src="String(job.image_url ?? themeAsset('/job-placeholder.svg'))" :alt="String(job.title ?? 'Offre')"
+            class="w-full h-36 object-cover border-b border-gray-100" />
           <div class="p-5">
             <div class="flex justify-between items-start mb-3">
               <div class="flex gap-1.5 flex-wrap">

@@ -54,7 +54,7 @@ function getPhotoUrl(photoPath: string | null | undefined): string | null {
       <div v-if="candidatesLoading" class="text-center py-12 text-gray-400">Chargement…</div>
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div v-for="candidate in topCandidates" :key="candidate.id"
+        <div v-for="candidate in topCandidates.slice(0, 4)" :key="candidate.id"
           class="group relative bg-white/70 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
           <div
             class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none">

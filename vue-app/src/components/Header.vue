@@ -27,9 +27,21 @@ const canAccessRecruiterMenus = computed(() => {
   return authRole.value === 'recruiter' || authRole.value === 'admin'
 })
 
+// ── Computed: partner can create jobs and see their offers ─────────────────
+const isPartner = computed(() => authRole.value === 'partenaire')
+
+const canPublishJobs = computed(() => {
+  return canAccessRecruiterMenus.value || isPartner.value
+})
+
 // ── Computed: check if user is candidate ──────────────────────────────────
 const isCandidate = computed(() => {
   return authRole.value === 'candidate'
+})
+
+// ── Simple events link (guest, candidate, partner) ─────────────────────────
+const showSimpleEventsLink = computed(() => {
+  return !isLoggedIn.value || isCandidate.value || isPartner.value
 })
 
 // ── Scroll detection ──────────────────────────────────────────────────────────
@@ -56,6 +68,7 @@ const initials = () => {
 
 const roleLabel = () => {
   if (authRole.value === 'recruiter') return 'Recruteur'
+  if (authRole.value === 'partenaire') return 'Partenaire'
   if (authRole.value === 'admin') return 'Admin'
   return 'Candidat'
 }
@@ -123,7 +136,7 @@ async function handleLogout() {
             Jobs
           </RouterLink>
 
-          <RouterLink v-if="canAccessRecruiterMenus" to="/jobs/new"
+          <RouterLink v-if="canPublishJobs" to="/jobs/new"
             class="relative px-3 py-1.5 text-sm font-semibold tracking-wide transition-all duration-200"
             active-class="text-green-600"
             :class="$route.path === '/jobs/new' ? 'text-green-600' : 'text-gray-700 hover:text-green-500'">
@@ -139,7 +152,7 @@ async function handleLogout() {
 
           <!-- 👇 Menu Événements corrigé -->
           <!-- Cas 1: Aucun utilisateur connecté OU Candidat : lien simple -->
-          <RouterLink v-if="!isLoggedIn || isCandidate" to="/evenements"
+          <RouterLink v-if="showSimpleEventsLink" to="/evenements"
             class="relative px-3 py-1.5 text-sm font-semibold tracking-wide transition-all duration-200"
             active-class="text-green-600"
             :class="$route.path.startsWith('/evenements') ? 'text-green-600' : 'text-gray-700 hover:text-green-500'">
@@ -244,7 +257,7 @@ async function handleLogout() {
                   </span>
                 </div>
 
-                <RouterLink v-if="canAccessRecruiterMenus" to="/my-jobs"
+                <RouterLink v-if="canPublishJobs" to="/my-jobs"
                   class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
                   @click="userMenuOpen = false">
                   <FileText :size="15" class="text-blue-500" />
@@ -258,7 +271,7 @@ async function handleLogout() {
                   Candidatures
                 </RouterLink>
 
-                <RouterLink to="/mon-profil"
+                <RouterLink v-if="!isPartner" to="/mon-profil"
                   class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
                   @click="userMenuOpen = false">
                   <UserCircle2 :size="15" class="text-blue-500" />
@@ -334,7 +347,7 @@ async function handleLogout() {
             Jobs
           </RouterLink>
 
-          <RouterLink v-if="canAccessRecruiterMenus" to="/jobs/new" @click="closeNav"
+          <RouterLink v-if="canPublishJobs" to="/jobs/new" @click="closeNav"
             class="flex items-center gap-3 p-3 rounded-xl font-semibold text-sm transition-all duration-200"
             :class="$route.path === '/jobs/new' ? 'bg-gradient-to-r from-green-600 to-blue-500 text-white shadow-md' : 'text-gray-800 hover:bg-gray-100'">
             <FilePlus :size="18" />
@@ -417,7 +430,7 @@ async function handleLogout() {
             </div>
           </div>
 
-          <RouterLink v-if="canAccessRecruiterMenus" to="/my-jobs" @click="closeNav"
+          <RouterLink v-if="canPublishJobs" to="/my-jobs" @click="closeNav"
             class="flex items-center gap-3 w-full p-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition">
             <FileText :size="16" class="text-blue-500" />
             Mes offres d'emploi
@@ -429,7 +442,7 @@ async function handleLogout() {
             Candidatures
           </RouterLink>
 
-          <RouterLink to="/mon-profil" @click="closeNav"
+          <RouterLink v-if="!isPartner" to="/mon-profil" @click="closeNav"
             class="flex items-center gap-3 w-full p-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition">
             <UserCircle2 :size="16" class="text-blue-500" />
             Mon profil

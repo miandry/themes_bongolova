@@ -49,6 +49,7 @@ declare module 'vue-router' {
     requiresAuth?: boolean
     requiresProfils?: boolean
     requiresRecruiter?: boolean
+    requiresPublisher?: boolean
     guestOnly?: boolean
   }
 }
@@ -58,10 +59,10 @@ const routerBase = window.__BONGOLAVA_ROUTER_BASE ?? ''
 const routes: Array<RouteRecordRaw> = [
   { path: '/', component: HomeView },
   { path: '/jobs', component: JobsView },
-  { path: '/jobs/new', component: JobFormView, meta: { requiresAuth: true, requiresRecruiter: true } },
+  { path: '/jobs/new', component: JobFormView, meta: { requiresAuth: true, requiresPublisher: true } },
   { path: '/jobs/:id', component: JobDetailView },
   { path: '/jobs/:id/edit', component: JobFormView, meta: { requiresAuth: true, requiresRecruiter: true } },
-  { path: '/my-jobs', component: MyJobsView, meta: { requiresAuth: true, requiresRecruiter: true } },
+  { path: '/my-jobs', component: MyJobsView, meta: { requiresAuth: true, requiresPublisher: true } },
   { path: '/mes-candidatures', component: MyRecruiterApplicationsView, meta: { requiresAuth: true, requiresRecruiter: true } },
   { path: '/profils', component: ProfilsView, meta: { requiresAuth: true, requiresProfils: true } },
   { path: '/profils/:id', component: ProfilDetailView, meta: { requiresAuth: true, requiresProfils: true } },
@@ -94,6 +95,7 @@ router.beforeEach(async (to) => {
   const needsAuth = to.matched.some((record) => record.meta.requiresAuth)
   const needsProfils = to.matched.some((record) => record.meta.requiresProfils)
   const needsRecruiter = to.matched.some((record) => record.meta.requiresRecruiter)
+  const needsPublisher = to.matched.some((record) => record.meta.requiresPublisher)
   const guestOnly = to.matched.some((record) => record.meta.guestOnly)
 
   if (needsAuth || guestOnly) {
@@ -108,7 +110,15 @@ router.beforeEach(async (to) => {
     return { path: '/' }
   }
 
-  if (needsRecruiter && (auth.authRole !== 'recruiter' && auth.authRole !== 'admin')) {
+  if (to.path === '/mon-profil' && auth.authRole === 'partenaire') {
+    return { path: '/' }
+  }
+
+  if (needsRecruiter && auth.authRole !== 'recruiter' && auth.authRole !== 'admin') {
+    return { path: '/' }
+  }
+
+  if (needsPublisher && auth.authRole !== 'recruiter' && auth.authRole !== 'partenaire' && auth.authRole !== 'admin') {
     return { path: '/' }
   }
 

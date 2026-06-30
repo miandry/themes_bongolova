@@ -13,6 +13,7 @@ import Footer from '../components/Footer.vue'
 import Pagination from '../components/Pagination.vue'
 import { useNodeStore } from '@/stores/node/node.store'
 import { useTaxonomyStore } from '@/stores/taxonomy/taxonomy.store'
+import { themeAsset } from '@/composables/themeAsset.ts'
 
 const PER_PAGE = 12
 
@@ -140,6 +141,16 @@ const formatSalary = (job: { salary?: string | number }) => {
   // Formater avec des espaces tous les 3 chiffres
   return num.toLocaleString('fr-FR')
 }
+
+function publisherBadgeLabel(userType: unknown): string {
+  return userType === 'partenaire' ? 'Partenaire' : 'Recruteur'
+}
+
+function publisherBadgeClass(userType: unknown): string {
+  return userType === 'partenaire'
+    ? 'bg-purple-50 text-purple-700'
+    : 'bg-indigo-50 text-indigo-700'
+}
 </script>
 
 <template>
@@ -260,9 +271,15 @@ const formatSalary = (job: { salary?: string | number }) => {
         <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="job in jobs" :key="job.id"
             class="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col h-full">
+            <img :src="String(job.image_url ?? themeAsset('/job-placeholder.svg'))" :alt="String(job.title ?? 'Offre')"
+              class="w-full h-40 object-cover border-b border-gray-100" />
             <div class="p-5 flex flex-col flex-grow">
               <div class="flex items-start justify-between gap-2 mb-3">
                 <div class="flex gap-1.5 flex-wrap">
+                  <span
+                    :class="`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide ${publisherBadgeClass(job.user_type)}`">
+                    {{ publisherBadgeLabel(job.user_type) }}
+                  </span>
                   <span class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold tracking-wide">{{
                     job.contract_type ?? job.type }}</span>
                   <span v-if="job.is_urgent ?? job.urgent"
@@ -312,9 +329,8 @@ const formatSalary = (job: { salary?: string | number }) => {
             class="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 p-4">
             <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
               <div class="flex-shrink-0">
-                <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <Building2 :size="24" class="text-gray-400" />
-                </div>
+                <img :src="String(job.image_url ?? themeAsset('/job-placeholder.svg'))" :alt="String(job.title ?? 'Offre')"
+                  class="w-12 h-12 rounded-lg object-cover border border-gray-200" />
               </div>
               <div class="flex-grow min-w-0">
                 <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
@@ -325,6 +341,10 @@ const formatSalary = (job: { salary?: string | number }) => {
                     <p class="text-gray-500 text-sm">{{ job.company }}</p>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      :class="`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide ${publisherBadgeClass(job.user_type)}`">
+                      {{ publisherBadgeLabel(job.user_type) }}
+                    </span>
                     <span
                       class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold tracking-wide">{{
                         job.contract_type ?? job.type }}</span>

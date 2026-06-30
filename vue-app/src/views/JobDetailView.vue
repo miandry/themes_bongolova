@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
   ArrowLeft, MapPin, Building2, Briefcase, Calendar,
   Heart, CheckCircle2, Zap, Share2,
-  Phone, Mail, Tag, Award, Edit3, Trash2, Loader2
+  Phone, Mail, Tag, Award, Edit3, Trash2, Loader2, X, Maximize2
 } from 'lucide-vue-next'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
@@ -24,6 +24,35 @@ const { currentUser, authRole } = storeToRefs(auth)
 
 const applySuccess = ref(false)
 const deleting = ref(false)
+const imageFullscreenOpen = ref(false)
+
+const jobImageUrl = computed(() => {
+  const url = job.value?.image_url
+  return url ? String(url) : ''
+})
+
+const hasJobImage = computed(() => jobImageUrl.value.length > 0)
+
+function openImageFullscreen() {
+  if (!hasJobImage.value) return
+  imageFullscreenOpen.value = true
+}
+
+function closeImageFullscreen() {
+  imageFullscreenOpen.value = false
+}
+
+function onImageKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeImageFullscreen()
+}
+
+const isPartnerJob = computed(() => (job.value?.user_type ?? null) === 'partenaire')
+
+const canShowApplyForm = computed(() => {
+  if (isPartnerJob.value) return false
+  if (authRole.value === 'partenaire') return false
+  return true
+})
 
 /** API returns recruiter_id only — build a safe display object (avoids render crash). */
 const recruiter = computed(() => {
@@ -94,7 +123,14 @@ async function deleteJob() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  window.addEventListener('keydown', onImageKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onImageKeydown)
+})
 </script>
 
 <template>
@@ -142,6 +178,22 @@ onMounted(load)
 
               <!-- Titre + Infos de base -->
               <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <button
+                  v-if="hasJobImage"
+                  type="button"
+                  class="group relative block w-full mb-5 rounded-xl overflow-hidden border border-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  :aria-label="`Voir l'image de ${job.title} en plein écran`"
+                  @click="openImageFullscreen">
+                  <img :src="jobImageUrl" :alt="String(job.title ?? 'Offre')"
+                    class="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+                  <span
+                    class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                    <span
+                      class="opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 text-white rounded-full p-2.5">
+                      <Maximize2 :size="22" />
+                    </span>
+                  </span>
+                </button>
                 <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div>
                     <h1 class="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">{{ job.title }}</h1>
@@ -220,7 +272,7 @@ onMounted(load)
                 </div>
               </div>
 
-              <JobApplyForm :job-id="jobId" :job-title="String(job.title ?? '')" variant="section"
+              <JobApplyForm v-if="canShowApplyForm" :job-id="jobId" :job-title="String(job.title ?? '')" variant="section"
                 :applied="applySuccess" @success="applySuccess = true" />
 
             </div>
@@ -252,7 +304,7 @@ onMounted(load)
                   </div>
                 </div>
 
-                <JobApplyForm :job-id="jobId" :job-title="String(job.title ?? '')" variant="sidebar"
+                <JobApplyForm v-if="canShowApplyForm" :job-id="jobId" :job-title="String(job.title ?? '')" variant="sidebar"
                   :applied="applySuccess" @success="applySuccess = true" />
               </div>
 
@@ -303,5 +355,43 @@ onMounted(load)
       </div>
     </main>
     <Footer />
+
+    <!-- Lightbox plein écran -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="imageFullscreenOpen && hasJobImage"
+          class="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 p-4 sm:p-8"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="`Image de ${job?.title ?? 'offre'}`"
+          @click.self="closeImageFullscreen">
+          <button
+            type="button"
+            class="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+            aria-label="Fermer"
+            @click="closeImageFullscreen">
+            <X :size="24" />
+          </button>
+          <img
+            :src="jobImageUrl"
+            :alt="String(job?.title ?? 'Offre')"
+            class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            @click.stop />
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from "vue";
+import { ref, onMounted, watch, nextTick, computed } from "vue";
 import { storeToRefs } from "pinia";
 import { RouterLink, useRouter } from "vue-router";
 import {
@@ -33,6 +33,7 @@ import Footer from "../components/Footer.vue";
 import { useNodeStore } from "@/stores/node/node.store";
 import { useTaxonomyStore } from "@/stores/taxonomy/taxonomy.store";
 import { useAuthStore } from "@/stores/auth/auth.store";
+import { themeAsset } from "@/composables/themeAsset.ts";
 
 const router = useRouter();
 const nodeStore = useNodeStore();
@@ -42,9 +43,17 @@ const { jobs, jobsLoading, jobsError } = storeToRefs(nodeStore);
 const { sectors, contractTypes, locations } = storeToRefs(taxonomyStore);
 const { currentUser, authRole } = storeToRefs(authStore);
 
-// Check permissions - only recruiters and admins
+const canAccessMyJobs = computed(() =>
+    authRole.value === "recruiter" || authRole.value === "partenaire" || authRole.value === "admin",
+);
+
+const canManageJobs = computed(() =>
+    authRole.value === "recruiter" || authRole.value === "admin",
+);
+
+// Check permissions
 onMounted(() => {
-    if (authRole.value !== "recruiter" && authRole.value !== "admin") {
+    if (!canAccessMyJobs.value) {
         router.push("/");
     }
 });
@@ -136,6 +145,11 @@ const formatSalary = (job: { salary?: string | number }) => {
     // Formater avec des espaces tous les 3 chiffres
     return num.toLocaleString("fr-FR");
 };
+
+function jobImageUrl(j: unknown): string {
+    const imageUrl = (j as { image_url?: string | null })?.image_url
+    return imageUrl ? String(imageUrl) : themeAsset('/job-placeholder.svg')
+}
 
 // Fonctions de traduction des statuts
 const getStatusLabel = (status: string) => {
@@ -305,13 +319,13 @@ const formatDate = (dateString: string) => {
         <main class="flex-grow pt-20 pb-16">
             <div class="max-w-6xl mx-auto px-4 sm:px-6">
                 <!-- Permission Check -->
-                <div v-if="authRole !== 'recruiter' && authRole !== 'admin'"
+                <div v-if="!canAccessMyJobs"
                     class="bg-red-50 border border-red-200 rounded-xl p-6 mb-8 flex items-start gap-3">
                     <AlertCircle class="text-red-500 shrink-0 mt-1" :size="20" />
                     <div>
                         <h3 class="font-bold text-red-900">Accès refusé</h3>
                         <p class="text-red-700 text-sm mt-1">
-                            Seuls les recruteurs peuvent accéder à cette page.
+                            Vous n'avez pas accès à cette page.
                         </p>
                     </div>
                 </div>
@@ -443,6 +457,8 @@ const formatDate = (dateString: string) => {
                 <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div v-for="job in jobs" :key="job.id"
                         class="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col h-full">
+                        <img :src="jobImageUrl(job)" :alt="String(job.title ?? 'Offre')"
+                            class="w-full h-40 object-cover border-b border-gray-100" />
                         <div class="p-5 flex flex-col flex-grow">
                             <div class="flex items-start justify-between gap-2 mb-3">
                                 <div class="flex gap-1.5 flex-wrap">
@@ -490,7 +506,7 @@ const formatDate = (dateString: string) => {
                                     <Eye :size="16" class="mr-1" /> Voir détail
                                 </RouterLink>
                                 <!-- Bouton Republier - visible uniquement si expired -->
-                                <button v-if="job.status === 'expired'" @click="openRepublishModal(job.id)"
+                                <button v-if="canManageJobs && job.status === 'expired'" @click="openRepublishModal(job.id)"
                                     class="flex-1 flex items-center justify-center py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md">
                                     <RefreshCw :size="16" class="mr-1" /> Republier
                                 </button>
@@ -516,9 +532,8 @@ const formatDate = (dateString: string) => {
                         class="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 p-4">
                         <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                             <div class="flex-shrink-0">
-                                <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
-                                    <Building2 :size="24" class="text-gray-400" />
-                                </div>
+                                <img :src="jobImageUrl(job)" :alt="String(job.title ?? 'Offre')"
+                                    class="w-12 h-12 rounded-lg object-cover border border-gray-200" />
                             </div>
                             <div class="flex-grow min-w-0">
                                 <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
@@ -565,7 +580,7 @@ const formatDate = (dateString: string) => {
                                     <Eye :size="16" class="inline mr-1" /> Voir détail
                                 </RouterLink>
                                 <!-- Bouton Republier - visible uniquement si expired -->
-                                <button v-if="job.status === 'expired'" @click="openRepublishModal(job.id)"
+                                <button v-if="canManageJobs && job.status === 'expired'" @click="openRepublishModal(job.id)"
                                     class="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 text-white transition shadow-sm hover:shadow-md">
                                     <RefreshCw :size="18" />
                                 </button>

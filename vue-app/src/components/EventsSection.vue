@@ -18,7 +18,8 @@ const loading = computed(() => eventsLoading.value)
 
 onMounted(async () => {
   try {
-    await nodeStore.fetchEvents()
+    // Charger seulement 3 événements pour l'accueil.
+    await nodeStore.fetchEvents({ per_page: 3 })
   } catch (error) {
     console.error('Erreur lors du chargement des événements:', error)
   }
