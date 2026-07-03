@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
   ArrowLeft, Calendar, MapPin, Clock, Users2,
-  CheckCircle2, Share2, Phone, Mail, Loader2
+  CheckCircle2, Share2, Phone, Mail, Loader2, X, Maximize2
 } from 'lucide-vue-next'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
@@ -23,6 +23,27 @@ const regError = ref('')
 const regName = ref('')
 const regEmail = ref('')
 const regPhone = ref('')
+const imageFullscreenOpen = ref(false)
+
+const eventImageUrl = computed(() => {
+  const url = event.value?.image_url
+  return url ? String(url) : ''
+})
+
+const hasEventImage = computed(() => eventImageUrl.value.length > 0)
+
+function openImageFullscreen() {
+  if (!hasEventImage.value) return
+  imageFullscreenOpen.value = true
+}
+
+function closeImageFullscreen() {
+  imageFullscreenOpen.value = false
+}
+
+function onImageKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeImageFullscreen()
+}
 
 // --- Utilitaires pour les dates ---
 // Les dates de l'API sont au format ISO (ex: "2026-06-30T09:00:00")
@@ -155,7 +176,14 @@ const shareEvent = async () => {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  window.addEventListener('keydown', onImageKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onImageKeydown)
+})
 </script>
 
 <template>
@@ -187,6 +215,14 @@ onMounted(load)
           </button>
 
           <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+            <!-- Image de l'événement -->
+            <div v-if="hasEventImage" class="relative group cursor-pointer" @click="openImageFullscreen">
+              <img :src="eventImageUrl" :alt="event.title" class="w-full h-64 md:h-80 object-cover" />
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <Maximize2 :size="32" class="text-white" />
+              </div>
+            </div>
+
             <!-- En-tête -->
             <div class="p-6 md:p-8 border-b border-gray-100">
               <div class="flex flex-col md:flex-row justify-between items-start gap-4">
@@ -303,6 +339,31 @@ onMounted(load)
         </template>
       </div>
     </main>
+
+    <!-- Fullscreen Image Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="imageFullscreenOpen" class="fixed inset-0 z-100 flex items-center justify-center bg-black/90 p-4" @click="closeImageFullscreen">
+          <button @click="closeImageFullscreen" class="absolute top-4 right-4 text-white hover:text-gray-300 transition">
+            <X :size="32" />
+          </button>
+          <img :src="eventImageUrl" :alt="event.title" class="max-w-full max-h-full object-contain" @click.stop />
+        </div>
+      </Transition>
+    </Teleport>
+
     <Footer />
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

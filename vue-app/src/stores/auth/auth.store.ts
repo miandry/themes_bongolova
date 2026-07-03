@@ -160,6 +160,8 @@ export const useAuthStore = defineStore('auth', () => {
     email: string
     password: string
     organization: string
+    nif_number?: string
+    cin_number?: string
     phone?: string
   }): Promise<{ ok: boolean; message?: string }> {
     loading.value = true
@@ -177,10 +179,10 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = msg
         return { ok: false, message: msg }
       }
-      applyUserFromPayload(json)
+      // For recruiters, don't auto-login since account needs admin approval
       checked.value = true
       success.value = true
-      return { ok: true }
+      return { ok: true, message: json.message }
     }
     catch {
       const msg = 'Erreur de connexion. Veuillez réessayer.'

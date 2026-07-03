@@ -434,11 +434,47 @@ export const useNodeStore = defineStore('node', () => {
     }
   }
 
+  async function createEventForm(fd: FormData) {
+    eventsLoading.value = true
+    eventsError.value = null
+    try {
+      const created = await apiPostForm<Event>(API_ROUTES.events, fd)
+      listCache.clear()
+      return created
+    }
+    catch (e) {
+      eventsError.value = e instanceof Error ? e.message : 'Erreur création événement.'
+      throw e
+    }
+    finally {
+      eventsLoading.value = false
+    }
+  }
+
   async function updateEvent(id: number | string, payload: Partial<Event>) {
     eventLoading.value = true
     eventError.value = null
     try {
       const updated = await apiPut<Event>(API_ROUTES.event(id), payload)
+      event.value = updated
+      detailCache.delete(cacheKey('event', `:${id}`))
+      listCache.clear()
+      return updated
+    }
+    catch (e) {
+      eventError.value = e instanceof Error ? e.message : 'Erreur mise à jour événement.'
+      throw e
+    }
+    finally {
+      eventLoading.value = false
+    }
+  }
+
+  async function updateEventForm(id: number | string, fd: FormData) {
+    eventLoading.value = true
+    eventError.value = null
+    try {
+      const updated = await apiPostForm<Event>(API_ROUTES.event(id), fd)
       event.value = updated
       detailCache.delete(cacheKey('event', `:${id}`))
       listCache.clear()
@@ -566,7 +602,9 @@ export const useNodeStore = defineStore('node', () => {
     searchMyEvents,
     registerEvent,
     createEvent,
+    createEventForm,
     updateEvent,
+    updateEventForm,
     removeEvent,
     submitContact,
     fetchAll,

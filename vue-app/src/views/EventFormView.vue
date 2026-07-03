@@ -37,6 +37,9 @@ const form = ref({
   contact_phone: '',
 })
 
+const imageFile = ref<File | null>(null)
+const imagePreview = ref<string | null>(null)
+
 const isEditing = computed(() => route.path.includes('/edit'))
 const eventId = computed(() => {
   const id = route.params.id
@@ -122,6 +125,10 @@ async function loadEventData() {
       contact_email: event.contact_email ?? '',
       contact_phone: event.contact_phone ?? '',
     }
+    
+    if (event.image_url) {
+      imagePreview.value = event.image_url
+    }
   } catch {
     errorMessage.value = 'Erreur lors du chargement de l\'événement.'
   }
@@ -131,6 +138,35 @@ function prefillEmail() {
   if (!form.value.contact_email && currentUser.value?.email) {
     form.value.contact_email = currentUser.value.email
   }
+}
+
+function handleImageUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  // Validate file size (5MB max)
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    errorMessage.value = 'L\'image ne doit pas dépasser 5MB.'
+    return
+  }
+
+  // Validate file type
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) {
+    errorMessage.value = 'Format d\'image non supporté. Formats acceptés: JPG, PNG, WEBP, GIF.'
+    return
+  }
+
+  imageFile.value = file
+  imagePreview.value = URL.createObjectURL(file)
+  errorMessage.value = ''
+}
+
+function removeImage() {
+  imageFile.value = null
+  imagePreview.value = null
 }
 
 async function submitForm() {
@@ -144,26 +180,30 @@ async function submitForm() {
 
   saving.value = true
   try {
-    const payload: Partial<Event> = {
-      title: form.value.title.trim(),
-      description: form.value.description.trim(),
-      horaires: form.value.horaires.trim(),
-      date: form.value.date,
-      type: form.value.type,
-      location: form.value.location.trim(),
-      address: form.value.address.trim() || undefined,
-      capacity: form.value.capacity ? Number(form.value.capacity) : undefined,
-      organizer: form.value.organizer.trim() || undefined,
-      contact_email: form.value.contact_email.trim() || undefined,
-      contact_phone: form.value.contact_phone.trim() || undefined,
+    // Use FormData for image upload
+    const formData = new FormData()
+    formData.append('title', form.value.title.trim())
+    formData.append('description', form.value.description.trim())
+    formData.append('horaires', form.value.horaires.trim())
+    formData.append('date', form.value.date)
+    formData.append('type', form.value.type)
+    formData.append('location', form.value.location.trim())
+    if (form.value.address.trim()) formData.append('address', form.value.address.trim())
+    if (form.value.capacity) formData.append('capacity', String(Number(form.value.capacity)))
+    if (form.value.organizer.trim()) formData.append('organizer', form.value.organizer.trim())
+    if (form.value.contact_email.trim()) formData.append('contact_email', form.value.contact_email.trim())
+    if (form.value.contact_phone.trim()) formData.append('contact_phone', form.value.contact_phone.trim())
+    
+    if (imageFile.value) {
+      formData.append('image', imageFile.value)
     }
 
     if (isEditing.value && eventId.value) {
-      await nodeStore.updateEvent(eventId.value, payload)
+      await nodeStore.updateEventForm(eventId.value, formData)
       successMessage.value = 'Événement mis à jour avec succès.'
       setTimeout(() => router.push('/mes-evenements'), 1500)
     } else {
-      await nodeStore.createEvent(payload)
+      await nodeStore.createEventForm(formData)
       successMessage.value = 'Événement créé avec succès. Il sera visible après validation.'
       setTimeout(() => router.push('/mes-evenements'), 1500)
     }
@@ -244,6 +284,30 @@ onMounted(async () => {
                 <textarea v-model="form.description" rows="5" placeholder="Décrivez l'événement..."
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 resize-y" />
                 <p v-if="formErrors.description" class="text-red-600 text-xs mt-1">{{ formErrors.description[0] }}</p>
+              </div>
+
+              <!-- Image upload -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Image de l'événement</label>
+                <div class="space-y-3">
+                  <div v-if="imagePreview" class="relative inline-block">
+                    <img :src="imagePreview" alt="Aperçu" class="w-full max-w-md h-48 object-cover rounded-lg border border-gray-300" />
+                    <button type="button" @click="removeImage"
+                      class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition">
+                      ✕
+                    </button>
+                  </div>
+                  <div v-else class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition">
+                    <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" @change="handleImageUpload"
+                      class="hidden" id="event-image-upload" />
+                    <label for="event-image-upload" class="cursor-pointer">
+                      <div class="text-gray-500">
+                        <p class="text-sm font-medium">Cliquez pour télécharger une image</p>
+                        <p class="text-xs mt-1">JPG, PNG, WEBP, GIF (max 5MB)</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">

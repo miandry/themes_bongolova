@@ -12,6 +12,7 @@ import {
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import { useUserStore } from '@/stores/user/user.store'
+import { useAuthStore } from '@/stores/auth/auth.store'
 import {
   asList,
   personInitials,
@@ -24,7 +25,9 @@ const router = useRouter()
 const candidateId = route.params.id as string
 
 const userStore = useUserStore()
+const auth = useAuthStore()
 const { candidate, candidateLoading, candidateError } = storeToRefs(userStore)
+const { currentUser } = storeToRefs(auth)
 
 // ✅ Utilisation de splitByNewline pour les certifications
 const certifications = computed(() =>
@@ -91,6 +94,9 @@ const toggleSave = () => {
 const isSaved = computed(() =>
   candidate.value?.id ? userStore.isProfileSaved(Number(candidate.value.id)) : false,
 )
+
+// Check if user is authenticated
+const isAuthenticated = computed(() => !!currentUser.value)
 </script>
 
 <template>
@@ -280,11 +286,27 @@ const isSaved = computed(() =>
 
             <!-- Bouton de contact -->
             <div class="pt-4">
-              <RouterLink to="/login"
-                class="block w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-center hover:shadow-lg transition-all">
-                Contacter ce talent
-              </RouterLink>
-              <p class="text-center text-xs text-gray-400 mt-2">Connectez-vous ou créez un compte pour contacter</p>
+              <!-- Si non connecté -->
+              <template v-if="!isAuthenticated">
+                <RouterLink to="/login"
+                  class="block w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-center hover:shadow-lg transition-all">
+                  Contacter ce talent
+                </RouterLink>
+                <p class="text-center text-xs text-gray-400 mt-2">Connectez-vous ou créez un compte pour contacter</p>
+              </template>
+              <!-- Si connecté et email disponible -->
+              <template v-else-if="candidate.email">
+                <a :href="`mailto:${candidate.email}`"
+                  class="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-[10px] uppercase hover:opacity-90 transition shadow-md">
+                  <Mail :size="14" /> Contacter par email
+                </a>
+              </template>
+              <!-- Si connecté mais pas d'email -->
+              <template v-else>
+                <div class="text-center text-sm text-gray-500">
+                  Aucun email disponible
+                </div>
+              </template>
             </div>
           </div>
         </div>

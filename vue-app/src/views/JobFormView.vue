@@ -619,7 +619,7 @@ onMounted(async () => {
                                 <div v-if="imagePreviewUrl" class="mt-3">
                                     <p class="text-xs text-gray-500 mb-2">Aperçu</p>
                                     <img :src="imagePreviewUrl" alt="Aperçu image"
-                                        class="w-full max-w-md rounded-xl border border-gray-200 object-cover" />
+                                        class="max-w-[150px] rounded-xl border border-gray-200 object-cover" />
                                 </div>
                                 <p class="mt-1 text-xs text-gray-500">Formats: JPG, PNG, WEBP, GIF. Taille max: 5 Mo.</p>
                             </div>

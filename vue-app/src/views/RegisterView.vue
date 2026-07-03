@@ -4,16 +4,20 @@ import { useRouter } from 'vue-router'
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Sparkles, User, Building2, CircleCheck, Loader2 } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth/auth.store'
+import { useToast } from '@/composables/useToast'
 
 const router  = useRouter()
 const auth = useAuthStore()
 const { loading } = storeToRefs(auth)
+const toast = useToast()
 const goBack  = () => router.back()
 
 const role         = ref('candidat')   // 'candidat' | 'recruteur'
 const firstName    = ref('')
 const lastName     = ref('')
 const organization = ref('')
+const nifNumber    = ref('')
+const cinNumber    = ref('')
 const email        = ref('')
 const password     = ref('')
 const confirm      = ref('')
@@ -36,6 +40,18 @@ async function onSubmit() {
     error.value = "Le nom de l'organisation est requis."
     return
   }
+  if (role.value === 'recruteur' && !nifNumber.value.trim() && !cinNumber.value.trim()) {
+    error.value = 'Au moins un des numéros NIF ou CIN est requis.'
+    return
+  }
+  if (role.value === 'recruteur' && nifNumber.value.trim() && !/^\d{10}$/.test(nifNumber.value.trim())) {
+    error.value = 'Le NIF doit contenir exactement 10 chiffres.'
+    return
+  }
+  if (role.value === 'recruteur' && cinNumber.value.trim() && !/^\d{12}$/.test(cinNumber.value.trim())) {
+    error.value = 'Le CIN doit contenir exactement 12 chiffres.'
+    return
+  }
   if (password.value.length < 8) {
     error.value = 'Le mot de passe doit contenir au moins 8 caractères.'
     return
@@ -54,6 +70,8 @@ async function onSubmit() {
           email: email.value.trim(),
           password: password.value,
           organization: organization.value.trim(),
+          nif_number: nifNumber.value.trim(),
+          cin_number: cinNumber.value.trim(),
           phone: '',
         })
       : await auth.registerCandidate({
@@ -69,7 +87,14 @@ async function onSubmit() {
       return
     }
 
-    if (auth.currentUser) {
+    // Show success message and redirect to login for recruiters
+    if (role.value === 'recruteur') {
+      toast.success(
+        'Compte créé avec succès ! Votre compte est en attente de validation par l\'administrateur. Vous recevrez une notification par email dès que votre compte sera activé.',
+        { persistent: true }
+      )
+      await router.push('/login')
+    } else if (auth.currentUser) {
       await router.push('/mon-profil')
     } else {
       await router.push('/login')
@@ -186,6 +211,30 @@ async function onSubmit() {
               placeholder="Société Agricole de Madagascar"
               class="w-full px-4 py-3.5 bg-blue-50/60 border border-blue-100 rounded-xl text-gray-800 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
             />
+          </div>
+
+          <!-- Recruteur: NIF et CIN -->
+          <div v-if="role === 'recruteur'" class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Numéro NIF</label>
+              <input
+                v-model="nifNumber"
+                type="text"
+                placeholder="1234567890"
+                maxlength="10"
+                class="w-full px-4 py-3.5 bg-blue-50/60 border border-blue-100 rounded-xl text-gray-800 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Numéro CIN</label>
+              <input
+                v-model="cinNumber"
+                type="text"
+                placeholder="101234567890"
+                maxlength="12"
+                class="w-full px-4 py-3.5 bg-blue-50/60 border border-blue-100 rounded-xl text-gray-800 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+              />
+            </div>
           </div>
 
           <!-- Email -->

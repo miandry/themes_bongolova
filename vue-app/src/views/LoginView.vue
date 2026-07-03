@@ -4,11 +4,13 @@ import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Sparkles, Loader2 } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth/auth.store'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const route  = useRoute()
 const auth = useAuthStore()
 const { loading } = storeToRefs(auth)
+const toast = useToast()
 
 const email    = ref('')
 const password = ref('')
@@ -27,6 +29,13 @@ async function onSubmit() {
     const result = await auth.login(email.value.trim(), password.value)
     if (!result.ok) {
       error.value = result.message
+      // Show toast for inactive recruiter
+      if (result.message?.includes('inactive') || result.message?.includes('validation')) {
+        toast.error(
+          'Votre compte est en attente de validation par l\'administrateur. Vous recevrez une notification par email dès que votre compte sera activé.',
+          { persistent: true }
+        )
+      }
       return
     }
     // Redirect: honour ?redirect= param, or go to homepage

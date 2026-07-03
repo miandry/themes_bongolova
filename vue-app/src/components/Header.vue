@@ -95,19 +95,17 @@ async function handleLogout() {
         <!-- Logo -->
         <RouterLink to="/" class="flex items-center gap-3 md:gap-4 shrink-0 group">
           <div class="relative w-10 h-10 md:w-12 md:h-12 rounded-2xl overflow-hidden shadow-md bg-white">
-            <img :src="themeAsset('/logo.jpg')" alt="Ministère Jeunesse Sports" class="object-cover w-full h-full" />
+            <img :src="themeAsset('/logo-b.jpeg')" alt="Ministère Jeunesse Sports" class="object-cover w-full h-full" />
           </div>
           <div class="hidden lg:block">
             <div class="font-black text-gray-900 uppercase leading-tight">
               <span
-                class="text-lg md:text-xl tracking-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">DIRECTION
-                RÉGIONALE</span>
-              <span class="text-gray-800 font-bold text-sm ml-2">DE LA JEUNESSE ET DES SPORTS</span>
+                class="text-lg md:text-xl tracking-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">BONGOLAVA JOBS</span>
+              <!-- <span class="text-gray-800 font-bold text-sm ml-2">DE LA JEUNESSE ET DES SPORTS</span> -->
             </div>
             <div class="text-[9px] font-semibold text-gray-500 flex items-center gap-2 mt-0.5">
               <Globe :size="10" class="text-green-500" />
               <span>🇲🇬 Plateforme d'emploi officielle - Région Bongolava</span>
-              <span class="text-green-600 font-bold">| #1 2026</span>
             </div>
           </div>
           <div class="block md:hidden">
@@ -318,7 +316,7 @@ async function handleLogout() {
         <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200/50">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl overflow-hidden shadow-md bg-white">
-              <img :src="themeAsset('/logo.jpg')" alt="Ministère" class="object-cover w-full h-full" />
+              <img :src="themeAsset('/logo-b.jpeg')" alt="Ministère" class="object-cover w-full h-full" />
             </div>
             <div>
               <span class="font-black text-gray-900 text-xs block leading-tight">

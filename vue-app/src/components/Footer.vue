@@ -1,6 +1,7 @@
 <script setup>
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth/auth.store'
+import { themeAsset } from '@/composables/themeAsset';
 
 const { canAccessProfils } = storeToRefs(useAuthStore())
 const currentYear = new Date().getFullYear()
@@ -49,10 +50,16 @@ const currentYear = new Date().getFullYear()
         <!-- Brand -->
         <div class="space-y-4">
           <div class="flex items-center gap-2">
-            <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-green-500 rounded-xl flex items-center justify-center shadow-md">
+            <!-- <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-green-500 rounded-xl flex items-center justify-center shadow-md">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            </div> -->
+            <div class="relative w-10 h-10 md:w-12 md:h-12 rounded-2xl overflow-hidden shadow-md bg-white">
+              <img :src="themeAsset('/logo.jpg')" alt="Ministère Jeunesse Sports" class="object-cover w-full h-full" />
             </div>
-            <span class="text-gray-900 font-black text-xl tracking-tight">BONGOLAVA JOBS</span>
+            <div>
+             <span class="text-lg md:text-xl tracking-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent font-bold">DIRECTION RÉGIONALE</span>
+             <p class="text-gray-900 font-bold text-sm">DE LA JEUNESSE ET DES SPORTS</p>
+            </div>
           </div>
           <p class="text-gray-500 text-sm leading-relaxed">La plateforme emploi n°1 de la région Bongolava.</p>
           <div class="flex items-center gap-2">
