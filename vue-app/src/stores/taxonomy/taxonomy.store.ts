@@ -7,6 +7,7 @@ export interface TaxonomyTerm {
   value: string
   label: string
   id?: number
+  count?: number
 }
 
 export interface TaxonomyState {
