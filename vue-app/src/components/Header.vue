@@ -205,8 +205,9 @@ async function handleLogout() {
 
         <!-- Desktop right actions -->
         <div class="flex items-center gap-2">
+          <!-- md:flex -->
           <button @click="toggleDarkMode"
-            class="hidden md:flex p-2 text-gray-600 hover:text-green-600 hover:bg-gray-100 rounded-full transition">
+            class="hidden p-2 text-gray-600 hover:text-green-600 hover:bg-gray-100 rounded-full transition">
             <Moon v-if="!isDarkMode" :size="18" />
             <Sun v-else :size="18" />
           </button>
