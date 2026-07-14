@@ -29,11 +29,20 @@ async function onSubmit() {
     const result = await auth.login(email.value.trim(), password.value)
     if (!result.ok) {
       error.value = result.message
-      // Show toast for inactive recruiter
-      if (result.message?.includes('inactive') || result.message?.includes('validation')) {
+      if (result.code === 'email_not_verified' || result.message?.toLowerCase().includes('verify your email')) {
+        toast.error(
+          'Votre adresse email n\'est pas encore vérifiée. Consultez votre boîte mail et cliquez sur le lien de confirmation pour activer votre compte.',
+          { persistent: true },
+        )
+      }
+      else if (
+        result.code === 'awaiting_admin_validation'
+        || result.message?.includes('inactive')
+        || result.message?.includes('validation')
+      ) {
         toast.error(
           'Votre compte est en attente de validation par l\'administrateur. Vous recevrez une notification par email dès que votre compte sera activé.',
-          { persistent: true }
+          { persistent: true },
         )
       }
       return
@@ -114,9 +123,9 @@ async function onSubmit() {
               <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">
                 Mot de passe
               </label>
-              <a href="/user/password" class="text-xs font-semibold text-blue-600 hover:underline">
+              <RouterLink to="/forgot-password" class="text-xs font-semibold text-blue-600 hover:underline">
                 Mot de passe oublié ?
-              </a>
+              </RouterLink>
             </div>
             <div class="relative">
               <Lock :size="16" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />

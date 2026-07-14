@@ -1,45 +1,48 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import {
-  ArrowLeft, Mail, Phone, MapPin,
-  Send, CheckCircle2, AlertCircle, Loader2,
+  Mail, Phone, MapPin,
+  Send, CheckCircle2, Loader2,
   Sparkles, MessageCircle, HelpCircle
 } from 'lucide-vue-next'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import { useNodeStore } from '@/stores/node/node.store'
 import { storeToRefs } from 'pinia'
+import { useToast } from '@/composables/useToast'
 
 const nodeStore = useNodeStore()
 const { contactLoading, contactSuccess, contactError } = storeToRefs(nodeStore)
+const toast = useToast()
 
-// --- État du formulaire ---
 const form = ref({
   name: '',
   email: '',
   subject: '',
-  message: ''
+  message: '',
 })
 
-// --- Soumission du formulaire ---
 const handleSubmit = async (e: Event) => {
   e.preventDefault()
-  if (!form.value.name || !form.value.email || !form.value.message) {
-    alert('Veuillez remplir tous les champs obligatoires')
+  if (!form.value.name.trim() || !form.value.email.trim() || !form.value.message.trim()) {
+    toast.error('Veuillez remplir tous les champs obligatoires.', { persistent: true })
     return
   }
   try {
     await nodeStore.submitContact({
-      name: form.value.name,
-      email: form.value.email,
-      subject: form.value.subject,
-      message: form.value.message,
+      name: form.value.name.trim(),
+      email: form.value.email.trim(),
+      subject: form.value.subject || 'Message',
+      message: form.value.message.trim(),
     })
-    setTimeout(() => {
-      form.value = { name: '', email: '', subject: '', message: '' }
-    }, 4000)
-  } catch {
-    alert(contactError.value ?? "Erreur lors de l'envoi. Veuillez réessayer.")
+    toast.success('Message envoyé avec succès. Nous vous répondrons rapidement.')
+    form.value = { name: '', email: '', subject: '', message: '' }
+  }
+  catch {
+    toast.error(
+      contactError.value ?? "Erreur lors de l'envoi. Veuillez réessayer.",
+      { persistent: true },
+    )
   }
 }
 </script>

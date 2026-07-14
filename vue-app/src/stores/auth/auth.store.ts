@@ -47,7 +47,10 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(
     email: string,
     password: string,
-  ): Promise<{ ok: true; role: string } | { ok: false; message: string; errors?: Record<string, string[]> }> {
+  ): Promise<
+    | { ok: true; role: string }
+    | { ok: false; message: string; code?: string; errors?: Record<string, string[]> }
+  > {
     loading.value = true
     error.value = null
     success.value = false
@@ -68,7 +71,12 @@ export const useAuthStore = defineStore('auth', () => {
       const json = err.response.data ?? {}
       const msg = extractErrorMessage(json, 'Identifiants incorrects.')
       error.value = msg
-      return { ok: false, message: msg, errors: json?.errors }
+      return {
+        ok: false,
+        message: msg,
+        code: typeof json?.code === 'string' ? json.code : undefined,
+        errors: json?.errors,
+      }
     }
     finally {
       loading.value = false
@@ -125,7 +133,7 @@ export const useAuthStore = defineStore('auth', () => {
     first_name: string
     last_name: string
     phone?: string
-  }): Promise<{ ok: boolean; message?: string }> {
+  }): Promise<{ ok: boolean; message?: string; code?: string }> {
     loading.value = true
     error.value = null
     success.value = false
@@ -141,10 +149,14 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = msg
         return { ok: false, message: msg }
       }
-      applyUserFromPayload(json)
+      // Email must be verified before login — do not open a session.
       checked.value = true
       success.value = true
-      return { ok: true }
+      return {
+        ok: true,
+        message: json.message,
+        code: typeof json.code === 'string' ? json.code : 'email_verification_required',
+      }
     }
     catch {
       const msg = 'Erreur de connexion. Veuillez réessayer.'
@@ -163,7 +175,7 @@ export const useAuthStore = defineStore('auth', () => {
     nif_number?: string
     cin_number?: string
     phone?: string
-  }): Promise<{ ok: boolean; message?: string }> {
+  }): Promise<{ ok: boolean; message?: string; code?: string }> {
     loading.value = true
     error.value = null
     success.value = false
@@ -179,9 +191,160 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = msg
         return { ok: false, message: msg }
       }
-      // For recruiters, don't auto-login since account needs admin approval
       checked.value = true
       success.value = true
+      return {
+        ok: true,
+        message: json.message,
+        code: typeof json.code === 'string' ? json.code : 'email_verification_required',
+      }
+    }
+    catch {
+      const msg = 'Erreur de connexion. Veuillez réessayer.'
+      error.value = msg
+      return { ok: false, message: msg }
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
+  async function verifyEmail(
+    token: string,
+  ): Promise<{ ok: boolean; message?: string; code?: string; role?: string }> {
+    loading.value = true
+    error.value = null
+    try {
+      const r = await apiFetch(API_ROUTES.verifyEmail, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      const json = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        const msg = extractErrorMessage(json, 'Lien de vérification invalide ou expiré.')
+        error.value = msg
+        return { ok: false, message: msg }
+      }
+      return {
+        ok: true,
+        message: json.message,
+        code: typeof json.code === 'string' ? json.code : 'email_verified',
+        role: json.role,
+      }
+    }
+    catch {
+      const msg = 'Erreur de connexion. Veuillez réessayer.'
+      error.value = msg
+      return { ok: false, message: msg }
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
+  async function resendVerification(email: string): Promise<{ ok: boolean; message?: string }> {
+    loading.value = true
+    error.value = null
+    try {
+      const r = await apiFetch(API_ROUTES.resendVerification, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const json = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        const msg = extractErrorMessage(json, "Impossible d'envoyer l'email.")
+        error.value = msg
+        return { ok: false, message: msg }
+      }
+      return { ok: true, message: json.message }
+    }
+    catch {
+      const msg = 'Erreur de connexion. Veuillez réessayer.'
+      error.value = msg
+      return { ok: false, message: msg }
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
+  async function forgotPassword(email: string): Promise<{ ok: boolean; message?: string }> {
+    loading.value = true
+    error.value = null
+    try {
+      const r = await apiFetch(API_ROUTES.forgotPassword, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const json = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        const msg = extractErrorMessage(json, "Impossible d'envoyer l'email.")
+        error.value = msg
+        return { ok: false, message: msg }
+      }
+      return { ok: true, message: json.message }
+    }
+    catch {
+      const msg = 'Erreur de connexion. Veuillez réessayer.'
+      error.value = msg
+      return { ok: false, message: msg }
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
+  async function validateResetToken(token: string): Promise<{ ok: boolean; message?: string }> {
+    loading.value = true
+    error.value = null
+    try {
+      const r = await apiFetch(`${API_ROUTES.resetPassword}?token=${encodeURIComponent(token)}`, {
+        method: 'GET',
+      })
+      const json = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        const msg = extractErrorMessage(json, 'Lien invalide ou expiré.')
+        error.value = msg
+        return { ok: false, message: msg }
+      }
+      return { ok: true, message: json.message }
+    }
+    catch {
+      const msg = 'Erreur de connexion. Veuillez réessayer.'
+      error.value = msg
+      return { ok: false, message: msg }
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
+  async function resetPassword(
+    token: string,
+    password: string,
+    passwordConfirmation: string,
+  ): Promise<{ ok: boolean; message?: string }> {
+    loading.value = true
+    error.value = null
+    try {
+      const r = await apiFetch(API_ROUTES.resetPassword, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          password,
+          password_confirmation: passwordConfirmation,
+        }),
+      })
+      const json = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        const msg = extractErrorMessage(json, 'Impossible de réinitialiser le mot de passe.')
+        error.value = msg
+        return { ok: false, message: msg }
+      }
       return { ok: true, message: json.message }
     }
     catch {
@@ -212,5 +375,10 @@ export const useAuthStore = defineStore('auth', () => {
     setSessionUser,
     registerCandidate,
     registerRecruiter,
+    verifyEmail,
+    resendVerification,
+    forgotPassword,
+    validateResetToken,
+    resetPassword,
   }
 })

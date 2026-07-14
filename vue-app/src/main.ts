@@ -23,6 +23,9 @@ import PrivacyView from './views/PrivacyView.vue'
 import CookiesView from './views/CookiesView.vue'
 import LoginView from './views/LoginView.vue'
 import RegisterView from './views/RegisterView.vue'
+import VerifyEmailView from './views/VerifyEmailView.vue'
+import ForgotPasswordView from './views/ForgotPasswordView.vue'
+import ResetPasswordView from './views/ResetPasswordView.vue'
 import MonProfilView from './views/MonProfilView.vue'
 import { useAuthStore } from '@/stores/auth/auth.store'
 import { useTaxonomyStore } from '@/stores/taxonomy/taxonomy.store'
@@ -78,6 +81,9 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/cookies', component: CookiesView },
   { path: '/login', component: LoginView, meta: { guestOnly: true } },
   { path: '/register', component: RegisterView, meta: { guestOnly: true } },
+  { path: '/verify-email', component: VerifyEmailView },
+  { path: '/forgot-password', component: ForgotPasswordView, meta: { guestOnly: true } },
+  { path: '/reset-password', component: ResetPasswordView, meta: { guestOnly: true } },
   { path: '/mon-profil', component: MonProfilView, meta: { requiresAuth: true } },
 ]
 

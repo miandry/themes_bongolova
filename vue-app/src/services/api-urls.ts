@@ -12,6 +12,10 @@ export const API_ROUTES = {
   me: `${PREFIX}/me`,
   registerCandidate: `${PREFIX}/register/candidate`,
   registerRecruiter: `${PREFIX}/register/recruiter`,
+  verifyEmail: `${PREFIX}/verify-email`,
+  resendVerification: `${PREFIX}/verify-email/resend`,
+  forgotPassword: `${PREFIX}/forgot-password`,
+  resetPassword: `${PREFIX}/reset-password`,
 
   // Jobs
   jobs: `${PREFIX}/jobs`,

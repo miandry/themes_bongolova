@@ -87,18 +87,19 @@ async function onSubmit() {
       return
     }
 
-    // Show success message and redirect to login for recruiters
     if (role.value === 'recruteur') {
       toast.success(
-        'Compte créé avec succès ! Votre compte est en attente de validation par l\'administrateur. Vous recevrez une notification par email dès que votre compte sera activé.',
-        { persistent: true }
+        'Compte créé ! Vérifiez votre email pour confirmer votre adresse. Ensuite, un administrateur devra valider votre compte recruteur.',
+        { persistent: true },
       )
-      await router.push('/login')
-    } else if (auth.currentUser) {
-      await router.push('/mon-profil')
-    } else {
-      await router.push('/login')
     }
+    else {
+      toast.success(
+        'Compte créé ! Vérifiez votre email et cliquez sur le lien de confirmation avant de vous connecter.',
+        { persistent: true },
+      )
+    }
+    await router.push('/login')
   } catch {
     error.value = 'Erreur de connexion. Veuillez réessayer.'
   }
