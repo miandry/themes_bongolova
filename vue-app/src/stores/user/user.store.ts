@@ -336,6 +336,13 @@ export const useUserStore = defineStore('user', () => {
     return fetchCandidates(filters, false)
   }
 
+  async function contactCandidate(
+    id: number | string,
+    payload: { subject: string; message: string },
+  ) {
+    return apiPost<{ message: string }>(API_ROUTES.candidateContact(id), payload)
+  }
+
   // ── Saved jobs (API) ──────────────────────────────────────────────────────
   async function fetchSavedJobs() {
     if (!isCandidate.value) return []
@@ -429,6 +436,7 @@ export const useUserStore = defineStore('user', () => {
     fetchCandidates,
     fetchCandidateById,
     searchCandidates,
+    contactCandidate,
     fetchSavedJobs,
     saveJob,
     unsaveJob,

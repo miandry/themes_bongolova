@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
@@ -7,12 +7,13 @@ import {
   Phone, Mail, Heart, Share2, Award,
   GraduationCap, Globe, Home, Calendar,
   ShieldCheck, Code2, Loader2,
-  FileText  // ✅ Ajout de l'icône FileText
+  FileText, Send, X, CheckCircle2,
 } from 'lucide-vue-next'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import { useUserStore } from '@/stores/user/user.store'
 import { useAuthStore } from '@/stores/auth/auth.store'
+import { useToast } from '@/composables/useToast'
 import {
   asList,
   personInitials,
@@ -22,6 +23,7 @@ import {
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 const candidateId = route.params.id as string
 
 const userStore = useUserStore()
@@ -29,7 +31,6 @@ const auth = useAuthStore()
 const { candidate, candidateLoading, candidateError } = storeToRefs(userStore)
 const { currentUser } = storeToRefs(auth)
 
-// ✅ Utilisation de splitByNewline pour les certifications
 const certifications = computed(() =>
   splitByNewline(candidate.value?.certifications)
 )
@@ -42,7 +43,6 @@ const skills = computed(() =>
   asList(candidate.value?.skills)
 )
 
-// ✅ Utilisation de splitByNewline pour les éducations
 const education = computed(() =>
   splitByNewline(candidate.value?.educations ?? candidate.value?.education)
 )
@@ -60,7 +60,6 @@ const initials = computed(() =>
   personInitials(candidate.value?.first_name, candidate.value?.last_name),
 )
 
-// ✅ Fonction pour obtenir l'URL complète de la photo
 function getPhotoUrl(photoPath: string | null | undefined): string | null {
   if (!photoPath) return null
   if (photoPath.startsWith('/sites/')) {
@@ -69,7 +68,6 @@ function getPhotoUrl(photoPath: string | null | undefined): string | null {
   return `/sites/bongolava/files/bongolava_job/${photoPath}`
 }
 
-// ✅ Fonction pour obtenir l'URL complète du CV
 function getCvUrl(cvPath: string | null | undefined): string | null {
   if (!cvPath) return null
   if (cvPath.startsWith('/sites/')) {
@@ -95,8 +93,53 @@ const isSaved = computed(() =>
   candidate.value?.id ? userStore.isProfileSaved(Number(candidate.value.id)) : false,
 )
 
-// Check if user is authenticated
 const isAuthenticated = computed(() => !!currentUser.value)
+
+// ── Contact modal ───────────────────────────────────────────────────────────
+const showContactModal = ref(false)
+const contactSending = ref(false)
+const contactSuccess = ref(false)
+const contactForm = ref({ subject: '', message: '' })
+
+function openContactModal() {
+  if (!isAuthenticated.value) {
+    router.push('/login')
+    return
+  }
+  contactForm.value = { subject: '', message: '' }
+  contactSuccess.value = false
+  showContactModal.value = true
+}
+
+function closeContactModal() {
+  if (contactSending.value) return
+  showContactModal.value = false
+}
+
+async function submitContact() {
+  if (!candidate.value?.id) return
+  const subject = contactForm.value.subject.trim()
+  const message = contactForm.value.message.trim()
+  if (!subject || !message) {
+    toast.error('Veuillez remplir le sujet et le message.', { persistent: true })
+    return
+  }
+  contactSending.value = true
+  try {
+    await userStore.contactCandidate(candidate.value.id, { subject, message })
+    contactSuccess.value = true
+    toast.success('Message envoyé au candidat.')
+  }
+  catch (e) {
+    toast.error(
+      e instanceof Error ? e.message : "Erreur lors de l'envoi. Veuillez réessayer.",
+      { persistent: true },
+    )
+  }
+  finally {
+    contactSending.value = false
+  }
+}
 </script>
 
 <template>
@@ -190,7 +233,6 @@ const isAuthenticated = computed(() => !!currentUser.value)
                     </div>
                     <span class="font-medium text-sm">{{ candidate.phone }}</span>
                   </div>
-                  <!-- ✅ Ligne CV -->
                   <div v-if="candidate.cv_path" class="flex items-center gap-3 text-gray-600">
                     <div class="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center">
                       <FileText :size="14" class="text-gray-400" />
@@ -209,14 +251,14 @@ const isAuthenticated = computed(() => !!currentUser.value)
                 </div>
               </div>
               <div v-if="candidate.email" class="p-6 bg-gray-50 border-t border-gray-100 space-y-3">
-                <a :href="`mailto:${candidate.email}`"
+                <button type="button" @click="openContactModal"
                   class="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-[10px] uppercase hover:opacity-90 transition shadow-md">
                   <Mail :size="14" /> Contacter par email
-                </a>
+                </button>
               </div>
             </div>
 
-            <!-- ✅ Certifications avec liste à puces -->
+            <!-- Certifications -->
             <div v-if="certifications.length" class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
               <div class="flex items-center gap-2 mb-4">
                 <Award :size="18" class="text-purple-600" />
@@ -267,7 +309,7 @@ const isAuthenticated = computed(() => !!currentUser.value)
               <p class="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{{ candidate.bio }}</p>
             </div>
 
-            <!-- ✅ Formation avec liste à puces -->
+            <!-- Formation -->
             <div v-if="education.length" class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
               <div class="flex items-center gap-3 mb-4">
                 <div
@@ -286,7 +328,6 @@ const isAuthenticated = computed(() => !!currentUser.value)
 
             <!-- Bouton de contact -->
             <div class="pt-4">
-              <!-- Si non connecté -->
               <template v-if="!isAuthenticated">
                 <RouterLink to="/login"
                   class="block w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-center hover:shadow-lg transition-all">
@@ -294,14 +335,12 @@ const isAuthenticated = computed(() => !!currentUser.value)
                 </RouterLink>
                 <p class="text-center text-xs text-gray-400 mt-2">Connectez-vous ou créez un compte pour contacter</p>
               </template>
-              <!-- Si connecté et email disponible -->
               <template v-else-if="candidate.email">
-                <a :href="`mailto:${candidate.email}`"
+                <button type="button" @click="openContactModal"
                   class="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-[10px] uppercase hover:opacity-90 transition shadow-md">
                   <Mail :size="14" /> Contacter par email
-                </a>
+                </button>
               </template>
-              <!-- Si connecté mais pas d'email -->
               <template v-else>
                 <div class="text-center text-sm text-gray-500">
                   Aucun email disponible
@@ -312,6 +351,88 @@ const isAuthenticated = computed(() => !!currentUser.value)
         </div>
       </main>
     </template>
+
+    <!-- Modal contact candidat -->
+    <Teleport to="body">
+      <div v-if="showContactModal" class="fixed inset-0 z-[200]">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeContactModal" />
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+          <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative" @click.stop role="dialog"
+            aria-modal="true" aria-labelledby="contact-modal-title">
+            <button type="button" @click="closeContactModal"
+              class="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+              :disabled="contactSending" aria-label="Fermer">
+              <X :size="18" />
+            </button>
+
+            <div v-if="contactSuccess" class="text-center py-4">
+              <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 :size="28" class="text-green-600" />
+              </div>
+              <h3 class="text-lg font-bold text-gray-900">Message envoyé</h3>
+              <p class="text-sm text-gray-600 mt-2">
+                Votre message a été envoyé à
+                {{ candidate?.first_name }} {{ candidate?.last_name }}.
+              </p>
+              <button type="button" @click="closeContactModal"
+                class="mt-6 w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-sm hover:opacity-90 transition">
+                Fermer
+              </button>
+            </div>
+
+            <template v-else>
+              <div class="flex items-center gap-3 mb-5 pr-8">
+                <div
+                  class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 text-white flex items-center justify-center shadow-md shrink-0">
+                  <Mail :size="18" />
+                </div>
+                <div>
+                  <h3 id="contact-modal-title" class="text-lg font-bold text-gray-900">Contacter le candidat</h3>
+                  <p class="text-xs text-gray-500">
+                    {{ candidate?.first_name }} {{ candidate?.last_name }}
+                  </p>
+                </div>
+              </div>
+
+              <form class="space-y-4" @submit.prevent="submitContact">
+                <div>
+                  <label for="contact-subject" class="text-sm font-medium text-gray-700 mb-1.5 block">
+                    Sujet <span class="text-red-500">*</span>
+                  </label>
+                  <input id="contact-subject" v-model="contactForm.subject" type="text" required maxlength="200"
+                    placeholder="Ex. Opportunité de poste"
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-sm"
+                    :disabled="contactSending" />
+                </div>
+                <div>
+                  <label for="contact-message" class="text-sm font-medium text-gray-700 mb-1.5 block">
+                    Message <span class="text-red-500">*</span>
+                  </label>
+                  <textarea id="contact-message" v-model="contactForm.message" rows="5" required
+                    placeholder="Écrivez votre message…"
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition resize-none text-sm"
+                    :disabled="contactSending" />
+                </div>
+                <div class="flex gap-2 pt-1">
+                  <button type="button" @click="closeContactModal"
+                    class="flex-1 py-3 border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition"
+                    :disabled="contactSending">
+                    Annuler
+                  </button>
+                  <button type="submit"
+                    class="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl text-sm font-bold hover:opacity-90 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="contactSending">
+                    <Loader2 v-if="contactSending" :size="16" class="animate-spin" />
+                    <Send v-else :size="16" />
+                    {{ contactSending ? 'Envoi…' : 'Envoyer' }}
+                  </button>
+                </div>
+              </form>
+            </template>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <Footer />
   </div>

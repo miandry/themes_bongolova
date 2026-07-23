@@ -35,6 +35,7 @@ export const API_ROUTES = {
   // Candidates
   candidates: `${PREFIX}/candidates`,
   candidate: (id: number | string) => `${PREFIX}/candidates/${id}`,
+  candidateContact: (id: number | string) => `${PREFIX}/candidates/${id}/contact`,
   myCandidateProfile: `${PREFIX}/my-candidate-profile`,
   candidateUploadPhoto: `${PREFIX}/candidate/upload-photo`,
   candidateUploadCv: `${PREFIX}/candidate/upload-cv`,
