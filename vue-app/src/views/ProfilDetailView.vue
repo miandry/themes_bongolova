@@ -354,7 +354,7 @@ async function submitContact() {
 
     <!-- Modal contact candidat -->
     <Teleport to="body">
-      <div v-if="showContactModal" class="fixed inset-0 z-[200]">
+      <div v-if="showContactModal" class="fixed inset-0 z-[100]">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeContactModal" />
         <div class="absolute inset-0 flex items-center justify-center p-4">
           <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative" @click.stop role="dialog"

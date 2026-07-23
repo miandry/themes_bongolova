@@ -61,7 +61,7 @@ defineExpose({
 
 <template>
   <Teleport to="body">
-    <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 z-100">
+    <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 z-105">
       <TransitionGroup name="toast">
         <div
           v-for="toast in toasts"
