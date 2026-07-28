@@ -147,7 +147,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (!r.ok) {
         const msg = extractErrorMessage(json, "Erreur lors de l'inscription.")
         error.value = msg
-        return { ok: false, message: msg }
+        return { ok: false, message: msg, code: typeof json.code === 'string' ? json.code : undefined }
       }
       // Email must be verified before login — do not open a session.
       checked.value = true
@@ -189,14 +189,14 @@ export const useAuthStore = defineStore('auth', () => {
       if (!r.ok) {
         const msg = extractErrorMessage(json, "Erreur lors de l'inscription.")
         error.value = msg
-        return { ok: false, message: msg }
+        return { ok: false, message: msg, code: typeof json.code === 'string' ? json.code : undefined }
       }
       checked.value = true
       success.value = true
       return {
         ok: true,
         message: json.message,
-        code: typeof json.code === 'string' ? json.code : 'email_verification_required',
+        code: typeof json.code === 'string' ? json.code : 'awaiting_admin_validation',
       }
     }
     catch {

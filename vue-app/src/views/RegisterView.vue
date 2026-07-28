@@ -84,12 +84,18 @@ async function onSubmit() {
 
     if (!result.ok) {
       error.value = result.message ?? "Erreur lors de l'inscription."
+      if (result.code === 'email_send_failed') {
+        toast.error(
+          'Compte créé mais l\'email de vérification n\'a pas pu être envoyé. Utilisez « Renvoyer l\'email » sur la page de connexion.',
+          { persistent: true },
+        )
+      }
       return
     }
 
     if (role.value === 'recruteur') {
       toast.success(
-        'Compte créé ! Vérifiez votre email pour confirmer votre adresse. Ensuite, un administrateur devra valider votre compte recruteur.',
+        'Compte créé ! Un administrateur doit valider votre compte recruteur avant que vous puissiez vous connecter.',
         { persistent: true },
       )
     }

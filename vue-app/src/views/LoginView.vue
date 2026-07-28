@@ -16,11 +16,34 @@ const email    = ref('')
 const password = ref('')
 const showPwd  = ref(false)
 const error    = ref('')
+const showResend = ref(false)
+const resending = ref(false)
 
 const goBack = () => router.back()
 
+async function resendVerificationEmail() {
+  if (!email.value.trim()) {
+    toast.error('Saisissez votre email pour renvoyer le lien de vérification.', { persistent: true })
+    return
+  }
+  resending.value = true
+  try {
+    const result = await auth.resendVerification(email.value.trim())
+    if (result.ok) {
+      toast.success('Si un compte candidat nécessite une vérification, un nouvel email a été envoyé.')
+    }
+    else {
+      toast.error(result.message ?? "Impossible d'envoyer l'email.", { persistent: true })
+    }
+  }
+  finally {
+    resending.value = false
+  }
+}
+
 async function onSubmit() {
   error.value = ''
+  showResend.value = false
   if (!email.value.trim() || !password.value) {
     error.value = 'Veuillez remplir tous les champs.'
     return
@@ -30,6 +53,7 @@ async function onSubmit() {
     if (!result.ok) {
       error.value = result.message
       if (result.code === 'email_not_verified' || result.message?.toLowerCase().includes('verify your email')) {
+        showResend.value = true
         toast.error(
           'Votre adresse email n\'est pas encore vérifiée. Consultez votre boîte mail et cliquez sur le lien de confirmation pour activer votre compte.',
           { persistent: true },
@@ -150,6 +174,16 @@ async function onSubmit() {
 
           <!-- Error -->
           <p v-if="error" class="text-xs text-red-500 font-medium">{{ error }}</p>
+
+          <button
+            v-if="showResend"
+            type="button"
+            :disabled="resending"
+            class="w-full py-3 border border-blue-200 text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition disabled:opacity-60"
+            @click="resendVerificationEmail"
+          >
+            {{ resending ? 'Envoi en cours…' : 'Renvoyer l\'email de vérification' }}
+          </button>
 
           <!-- Submit -->
           <button
